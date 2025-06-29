@@ -1,0 +1,15 @@
+phases:
+  - name: builtins
+    count: 20
+    builtins: [COUNT, MAX, AVG]
+
+  - name: single_table
+    count: 30
+    use_sample_rows: false
+
+  - name: joins
+    count: 25
+    examples_file: fewshot/multi_table_examples.yaml
+
+budget_usd: 2.0
+openai_model: gpt-4o-mini
