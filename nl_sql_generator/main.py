@@ -1,5 +1,5 @@
 import argparse, json, yaml
-from nl_sql_generator.schema_loader import SchemaLoader
+from schema_loader import SchemaLoader
 
 def cli():
     p = argparse.ArgumentParser()
