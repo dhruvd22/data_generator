@@ -40,3 +40,6 @@ def cli():
         print("🏗️  Generated SQL:", sql)
         print("✅ Valid" if ok else f"❌ Invalid: {err}")
         break  # one sample is enough for this milestone
+
+if __name__ == "__main__":
+    cli()
