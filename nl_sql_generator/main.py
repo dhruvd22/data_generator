@@ -5,9 +5,15 @@ import argparse, json, yaml
 from nl_sql_generator.schema_loader import SchemaLoader
 
 def cli():
-    # existing argparse, cfg, schema loading...
-    print(f"Loaded {len(schema)} tables from DB")
+    p = argparse.ArgumentParser()
+    p.add_argument("--config", default="config.yaml")
+    args = p.parse_args()
 
+    cfg = yaml.safe_load(open(args.config))
+    schema = SchemaLoader.load_schema()
+
+    print(f"Loaded {len(schema)} tables from DB\n---")
+    
     openai.api_key = os.getenv("OPENAI_API_KEY")
     if not openai.api_key:
         raise RuntimeError("Set OPENAI_API_KEY first")
