@@ -1,4 +1,4 @@
-import os, random, openai
+import os, random, re, openai
 from nl_sql_generator.prompt_builder import build_prompt
 from nl_sql_generator.sql_validator import SQLValidator
 import argparse, json, yaml
@@ -33,7 +33,8 @@ def cli():
             ],
             temperature=0.2,
         )
-        sql = response.choices[0].message.content.strip().strip("`").replace("SQL", "")
+        raw_sql = response.choices[0].message.content.strip().strip("`")
+        sql = re.sub(r"(?i)^sql\s*", "", raw_sql)
 
         ok, err = validator.check(sql)
         print("📝 NL question:", question)
