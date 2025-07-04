@@ -25,7 +25,7 @@ def cli():
         question = "Give me the total number of patients"  # stub NL question
         prompt = build_prompt(question, schema, phase)
 
-        response = openai.ChatCompletion.create(
+        response = openai.chat.completions.create(
             model=cfg["openai_model"],
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
