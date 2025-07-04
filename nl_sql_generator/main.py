@@ -22,7 +22,7 @@ def cli():
 
     for phase in cfg["phases"][:1]:  # just the first phase for now
         print(f"\n=== Phase: {phase['name']} ===")
-        question = "Give me the total number of users"  # stub NL question
+        question = "Give me the total number of patients"  # stub NL question
         prompt = build_prompt(question, schema, phase)
 
         response = openai.ChatCompletion.create(
