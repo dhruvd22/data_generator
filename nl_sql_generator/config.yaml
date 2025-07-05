@@ -12,4 +12,4 @@ phases:
     examples_file: fewshot/multi_table_examples.yaml
 
 budget_usd: 2.0
-openai_model: gpt-4o-mini
+openai_model: gpt-4.1
