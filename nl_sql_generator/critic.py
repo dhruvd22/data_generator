@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__ = ["Critic"]
+
 import json
 import os
 from datetime import datetime
@@ -19,6 +21,8 @@ class Critic:
         os.makedirs(self.log_dir, exist_ok=True)
 
     def _log(self, data: Dict[str, Any]) -> None:
+        """Append ``data`` to the daily JSONL log file."""
+
         log_path = os.path.join(
             self.log_dir, f"critic-{datetime.utcnow():%Y%m%d}.jsonl"
         )

@@ -13,6 +13,8 @@ from .writer import ResultWriter
 from .logger import log_call
 import logging
 
+__all__ = ["AutonomousJob", "JobResult"]
+
 log = logging.getLogger(__name__)
 
 
@@ -49,6 +51,8 @@ class AutonomousJob:
     # ------------------------------------------------------------------
     @log_call
     def _generate_sql(self, question: str) -> str:
+        """Generate SQL for ``question`` using the LLM."""
+
         prompt = build_prompt(question, self.schema, self.phase_cfg)
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
@@ -83,10 +87,12 @@ class AutonomousJob:
         """Process many questions concurrently."""
 
         async def worker(q: str) -> JobResult:
+            # ``run_sync`` uses blocking DB + network operations so push it to a thread
             return await asyncio.to_thread(self.run_sync, q)
 
         async def runner() -> List[JobResult]:
             tasks = [asyncio.create_task(worker(q)) for q in nl_questions]
+            # gather preserves order of ``nl_questions``
             return await asyncio.gather(*tasks)
 
         return asyncio.run(runner())

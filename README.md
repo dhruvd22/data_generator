@@ -1,59 +1,48 @@
 # data_generator
-NL‑to‑PostgreSQL Synthetic Data Generator
 
-Turn natural language questions into validated PostgreSQL queries + synthetic result rows.Built for creating LLM training data that pairs NL → SQL → answers.
+**LLM-ready SQL data generator.** Feed it plain-English questions and get vetted
+PostgreSQL queries plus anonymised result rows. The pipeline guards budget via an
+OpenAI cost tracker and modular phases that you can swap out or extend. Use it
+to produce high quality NL ⇢ SQL ⇢ answer triples for training or evaluation.
 
-Features
+## Features
 
-🗄️ Schema‑aware: connects to a read‑only Supabase Postgres instance and introspects tables/columns.
+* 🗄️ Schema introspection from your database
+* 🤖 GPT-driven prompt builder and critic loop
+* ✅ `EXPLAIN`-based SQL validation
+* 🔌 Plug-n-play phases for easy customisation
 
-✨ LLM‑first pipeline: orchestrates GPT‑4o via LangChain, with critic/validator loops.
+## Quick start
 
-✅ SQL safety net: runs EXPLAIN before execution, type‑checks, and catches runtime errors.
-
-🔌 Modular: each pipeline phase (loader, prompt builder, generator, critic, writer) lives in its own file.
-
-Quick Start
-
-# 1. Clone & install
-git clone git@github.com:dhruvd22/data_generator.git
+```bash
+# clone & install
+git clone https://github.com/dhruvd22/data_generator.git
 cd data_generator
-poetry install            # or: pip install -r requirements.txt
+pip install -r nl_sql_generator/requirements.txt
 
-# 2. Set creds
+# set credentials
 export DATABASE_URL="postgresql://user:pass@host:5432/db"
 export OPENAI_API_KEY="sk-..."
 
-# 3. Run the skeleton
-python -m nl_sql_generator.main --config=config.yaml
+# generate via CLI
+python -m nl_sql_generator.main gen questions.txt
 
-Config
+# or from Python
+from nl_sql_generator import AutonomousJob, SchemaLoader
+schema = SchemaLoader.load_schema()
+job = AutonomousJob(schema)
+result = job.run_sync("count the patients")
+print(result.sql, result.rows)
+```
 
-All runtime knobs live in config.yaml. Start with the provided template; tweak counts, budget or model as you iterate.
+## 🔌 How it works
 
-Repo Layout
+1. **main.AutonomousJob** – orchestrates the flow
+2. **SchemaLoader** – pulls table metadata
+3. **PromptBuilder** – crafts the few-shot prompt
+4. **ResponsesClient** – queries OpenAI
+5. **SQLValidator** – checks syntax via `EXPLAIN`
+6. **Critic** – reviews and optionally fixes SQL
+7. **Writer** – executes and fakes result rows
 
-l_sql_generator/
-├── main.py          # CLI entrypoint
-├── schema_loader.py # introspects DB
-├── prompt_builder.py
-├── sql_validator.py
-└── ...
-fewshot/             # prompt example YAMLs
-tests/
-
-Roadmap
-
-Milestone 3 – prompt builder & first end‑to‑end sample
-
-Milestone 4 – batch generation loop
-
-Milestone 5 – dataset packaging + CI tests
-
-Contributing
-
-Fork → branch → PR.
-
-Follow the commit style: feat: …, fix: …, docs: ….
-
-Run pytest before pushing.
+All configuration lives in `config.yaml`.
