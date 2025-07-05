@@ -3,6 +3,9 @@ from dataclasses import dataclass
 from typing import Dict, List
 from sqlalchemy import create_engine, inspect
 import os, json
+import logging
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -63,4 +66,5 @@ class SchemaLoader:
 if __name__ == "__main__":
     # quick manual test
     schema = SchemaLoader.load_schema()
-    print(json.dumps(SchemaLoader.to_json(schema), indent=2))
+    log = logging.getLogger(__name__)
+    log.info(json.dumps(SchemaLoader.to_json(schema), indent=2))

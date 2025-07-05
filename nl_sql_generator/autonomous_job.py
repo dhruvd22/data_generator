@@ -10,6 +10,10 @@ from .openai_responses import ResponsesClient
 from .sql_validator import SQLValidator
 from .critic import Critic
 from .writer import ResultWriter
+from .logger import log_call
+import logging
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -43,6 +47,7 @@ class AutonomousJob:
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
+    @log_call
     def _generate_sql(self, question: str) -> str:
         prompt = build_prompt(question, self.schema, self.phase_cfg)
         messages = [
@@ -57,6 +62,7 @@ class AutonomousJob:
     # ------------------------------------------------------------------
     # main entrypoints
     # ------------------------------------------------------------------
+    @log_call
     def run_sync(self, nl_question: str) -> JobResult:
         """Process a single question synchronously."""
         sql = self._generate_sql(nl_question)
@@ -72,6 +78,7 @@ class AutonomousJob:
         rows = self.writer.fetch(sql)
         return JobResult(nl_question, sql, rows)
 
+    @log_call
     def run_async(self, nl_questions: List[str]) -> List[JobResult]:
         """Process many questions concurrently."""
 
