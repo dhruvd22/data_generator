@@ -4,35 +4,35 @@
       "columns": {
         "DATE": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Date of the procedure"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter associated with the procedure"
         },
         "CODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Procedure code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Procedure description"
         },
         "BASE_COST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Base cost of the procedure"
         },
         "REASONCODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Reason code for the procedure"
         },
         "REASONDESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Reason description for the procedure"
         }
       },
       "primary_key": null
@@ -41,87 +41,87 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the payer"
         },
         "NAME": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Payer name"
         },
         "ADDRESS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Address of the payer"
         },
         "CITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "City where the payer is located"
         },
         "STATE_HEADQUARTERED": {
           "type": "TEXT",
-          "comment": null
+          "comment": "State where payer is headquartered"
         },
         "ZIP": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Zip code"
         },
         "PHONE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Contact phone number"
         },
         "AMOUNT_COVERED": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Amount covered by the payer"
         },
         "AMOUNT_UNCOVERED": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Amount not covered"
         },
         "REVENUE": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Total revenue of the payer"
         },
         "COVERED_ENCOUNTERS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of encounters covered"
         },
         "UNCOVERED_ENCOUNTERS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of encounters not covered"
         },
         "COVERED_MEDICATIONS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of medications covered"
         },
         "UNCOVERED_MEDICATIONS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of medications not covered"
         },
         "COVERED_PROCEDURES": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of procedures covered"
         },
         "UNCOVERED_PROCEDURES": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of procedures not covered"
         },
         "COVERED_IMMUNIZATIONS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of immunizations covered"
         },
         "UNCOVERED_IMMUNIZATIONS": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Number of immunizations not covered"
         },
         "UNIQUE_CUSTOMERS": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Count of unique customers"
         },
         "QOLS_AVG": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Average quality of life score"
         },
         "MEMBER_MONTHS": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Total member months"
         }
       },
       "primary_key": null
@@ -130,63 +130,63 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the encounter"
         },
         "START": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Time the encounter started"
         },
         "STOP": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Time the encounter ended"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ORGANIZATION": {
           "type": "UUID",
-          "comment": null
+          "comment": "Organization providing care"
         },
         "PROVIDER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary provider for the encounter"
         },
         "PAYER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Payer responsible for the encounter"
         },
         "ENCOUNTERCLASS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Type of encounter"
         },
         "CODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Encounter code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the encounter"
         },
         "BASE_ENCOUNTER_COST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Base cost of the encounter"
         },
         "TOTAL_CLAIM_COST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Total claim cost"
         },
         "PAYER_COVERAGE": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Amount covered by the payer"
         },
         "REASONCODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Reason code for the encounter"
         },
         "REASONDESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Reason description for the encounter"
         }
       },
       "primary_key": "Id"
@@ -195,27 +195,27 @@
       "columns": {
         "DATE": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Date the supply was provided"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter related to the supply"
         },
         "CODE": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Supply code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the supply"
         },
         "QUANTITY": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Quantity dispensed"
         }
       },
       "primary_key": null
@@ -224,103 +224,103 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the patient"
         },
         "BIRTHDATE": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date of birth"
         },
         "DEATHDATE": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date of death"
         },
         "SSN": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Social security number"
         },
         "DRIVERS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Driver license number"
         },
         "PASSPORT": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Passport number"
         },
         "PREFIX": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Name prefix"
         },
         "FIRST": {
           "type": "TEXT",
-          "comment": null
+          "comment": "First name"
         },
         "LAST": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Last name"
         },
         "SUFFIX": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Name suffix"
         },
         "MAIDEN": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Maiden name"
         },
         "MARITAL": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Marital status"
         },
         "RACE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Race of the patient"
         },
         "ETHNICITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Ethnicity of the patient"
         },
         "GENDER": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Gender of the patient"
         },
         "BIRTHPLACE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Birthplace of the patient"
         },
         "ADDRESS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Street address"
         },
         "CITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "City of residence"
         },
         "STATE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "State of residence"
         },
         "COUNTY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "County of residence"
         },
         "ZIP": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Zip code"
         },
         "LAT": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Latitude coordinate"
         },
         "LON": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Longitude coordinate"
         },
         "HEALTHCARE_EXPENSES": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Total healthcare expenses"
         },
         "HEALTHCARE_COVERAGE": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Total healthcare coverage amount"
         }
       },
       "primary_key": null
@@ -329,23 +329,23 @@
       "columns": {
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "START_YEAR": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Year coverage started"
         },
         "END_YEAR": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Year coverage ended"
         },
         "PAYER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Payer during the coverage period"
         },
         "OWNERSHIP": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Ownership type of the policy"
         }
       },
       "primary_key": null
@@ -354,51 +354,51 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the provider"
         },
         "ORGANIZATION": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the organization"
         },
         "NAME": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Provider name"
         },
         "GENDER": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Gender of the provider"
         },
         "SPECIALITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Provider specialty"
         },
         "ADDRESS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Street address"
         },
         "CITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "City"
         },
         "STATE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "State"
         },
         "ZIP": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Zip code"
         },
         "LAT": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Latitude coordinate"
         },
         "LON": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Longitude coordinate"
         },
         "UTILIZATION": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Utilization metric"
         }
       },
       "primary_key": null
@@ -407,31 +407,31 @@
       "columns": {
         "STOP": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Timestamp when the device was removed"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter associated with the device"
         },
         "CODE": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Device code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the device"
         },
         "UDI": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Unique device identifier"
         },
         "START": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Timestamp when the device was placed"
         }
       },
       "primary_key": null
@@ -440,43 +440,43 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the imaging study"
         },
         "DATE": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Date the imaging was performed"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter related to the imaging"
         },
         "BODYSITE_CODE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Code for body site imaged"
         },
         "BODYSITE_DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the body site"
         },
         "MODALITY_CODE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Imaging modality code"
         },
         "MODALITY_DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Imaging modality description"
         },
         "SOP_CODE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "SOP code for the image"
         },
         "SOP_DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "SOP description for the image"
         }
       },
       "primary_key": "Id"
@@ -485,27 +485,27 @@
       "columns": {
         "START": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date when the allergy episode began"
         },
         "STOP": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date when the allergy episode resolved"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter during which the allergy was recorded"
         },
         "CODE": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Code representing the allergy"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Human readable allergy description"
         }
       },
       "primary_key": null
@@ -514,47 +514,47 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the organization"
         },
         "NAME": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Organization name"
         },
         "ADDRESS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Street address of the organization"
         },
         "CITY": {
           "type": "TEXT",
-          "comment": null
+          "comment": "City where the organization is located"
         },
         "STATE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "State of the organization"
         },
         "ZIP": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Postal code"
         },
         "LAT": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Latitude coordinate"
         },
         "LON": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Longitude coordinate"
         },
         "PHONE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Contact phone number"
         },
         "REVENUE": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Organization revenue"
         },
         "UTILIZATION": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Utilization rate"
         }
       },
       "primary_key": "Id"
@@ -563,27 +563,27 @@
       "columns": {
         "DATE": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Date the immunization was given"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter during which the immunization occurred"
         },
         "CODE": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Immunization code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the immunization"
         },
         "BASE_COST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Base cost of the immunization"
         }
       },
       "primary_key": null
@@ -592,39 +592,39 @@
       "columns": {
         "Id": {
           "type": "UUID",
-          "comment": null
+          "comment": "Primary key for the care plan"
         },
         "START": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date the care plan started"
         },
         "STOP": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date the care plan ended"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter associated with the plan"
         },
         "CODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Care plan code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Description of the care plan"
         },
         "REASONCODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Reason code for the care plan"
         },
         "REASONDESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Reason description for the care plan"
         }
       },
       "primary_key": "Id"
@@ -633,35 +633,35 @@
       "columns": {
         "DATE": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Date of the observation"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter associated with the observation"
         },
         "CODE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Observation code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Observation description"
         },
         "VALUE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Observed value"
         },
         "UNITS": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Units of the observed value"
         },
         "TYPE": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Type of observation"
         }
       },
       "primary_key": null
@@ -670,27 +670,27 @@
       "columns": {
         "START": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date when the condition was first noted"
         },
         "STOP": {
           "type": "DATE",
-          "comment": null
+          "comment": "Date when the condition resolved"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter tied to the condition"
         },
         "CODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Code for the diagnosis"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Text description of the diagnosis"
         }
       },
       "primary_key": null
@@ -699,55 +699,55 @@
       "columns": {
         "START": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Time medication was started"
         },
         "STOP": {
           "type": "TIMESTAMP",
-          "comment": null
+          "comment": "Time medication was stopped"
         },
         "PATIENT": {
           "type": "UUID",
-          "comment": null
+          "comment": "Identifier of the patient"
         },
         "ENCOUNTER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Encounter related to the medication"
         },
         "CODE": {
           "type": "INTEGER",
-          "comment": null
+          "comment": "Medication code"
         },
         "DESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Medication description"
         },
         "BASE_COST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Base medication cost"
         },
         "PAYER_COVERAGE": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Amount covered by payer"
         },
         "DISPENSES": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Number of dispenses"
         },
         "TOTALCOST": {
           "type": "NUMERIC",
-          "comment": null
+          "comment": "Total medication cost"
         },
         "REASONCODE": {
           "type": "BIGINT",
-          "comment": null
+          "comment": "Reason code for medication"
         },
         "REASONDESCRIPTION": {
           "type": "TEXT",
-          "comment": null
+          "comment": "Reason description for medication"
         },
         "PAYER": {
           "type": "UUID",
-          "comment": null
+          "comment": "Payer responsible for medication"
         }
       },
       "primary_key": null
