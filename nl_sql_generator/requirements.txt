@@ -85,3 +85,4 @@ urllib3>=2.5.0
 xxhash>=3.5.0
 yarl>=1.20.1
 zstandard>=0.23.0
+typer>=0.12.3
