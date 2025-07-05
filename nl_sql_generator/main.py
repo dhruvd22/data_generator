@@ -2,18 +2,23 @@
 
 import argparse
 import json
+import logging
 import os
 import random
 import re
 import sys
+
 import openai
 import yaml
+
 from nl_sql_generator.prompt_builder import build_prompt
 from nl_sql_generator.sql_validator import SQLValidator
 from nl_sql_generator.schema_loader import SchemaLoader
 from nl_sql_generator.autonomous_job import AutonomousJob
+from nl_sql_generator.logger import init_logger
 import typer
 
+log = init_logger()
 app = typer.Typer(add_completion=False)
 
 
@@ -26,7 +31,7 @@ def cli() -> None:
     cfg = yaml.safe_load(open(args.config))
     schema = SchemaLoader.load_schema()
 
-    print(f"Loaded {len(schema)} tables from DB\n---")
+    log.info("Loaded %d tables from DB\n---", len(schema))
     
     openai.api_key = os.getenv("OPENAI_API_KEY")
     if not openai.api_key:
@@ -35,7 +40,7 @@ def cli() -> None:
     validator = SQLValidator()
 
     for phase in cfg["phases"][:1]:  # just the first phase for now
-        print(f"\n=== Phase: {phase['name']} ===")
+        log.info("\n=== Phase: %s ===", phase['name'])
         question = "Give me the total number of patients"  # stub NL question
         prompt = build_prompt(question, schema, phase)
 
@@ -51,9 +56,12 @@ def cli() -> None:
         sql = re.sub(r"(?i)^sql\s*", "", raw_sql)
 
         ok, err = validator.check(sql)
-        print("📝 NL question:", question)
-        print("🏗️  Generated SQL:", sql)
-        print("✅ Valid" if ok else f"❌ Invalid: {err}")
+        log.info("📝 NL question: %s", question)
+        log.info("🏗️  Generated SQL: %s", sql)
+        if ok:
+            log.info("✅ Valid")
+        else:
+            log.info("❌ Invalid: %s", err)
         break  # one sample is enough for this milestone
 
 
