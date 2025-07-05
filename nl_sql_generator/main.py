@@ -6,18 +6,18 @@ import argparse
 import json
 import logging
 import os
-import random
-import re
 import sys
 
-import openai
 import yaml
 
-from nl_sql_generator.prompt_builder import build_prompt
-from nl_sql_generator.sql_validator import SQLValidator
+from nl_sql_generator.input_loader import load_tasks
 from nl_sql_generator.schema_loader import SchemaLoader
 from nl_sql_generator.autonomous_job import AutonomousJob
 from nl_sql_generator.logger import init_logger
+from nl_sql_generator.openai_responses import ResponsesClient
+from nl_sql_generator.sql_validator import SQLValidator
+from nl_sql_generator.critic import Critic
+from nl_sql_generator.writer import ResultWriter
 import typer
 
 log = init_logger()
@@ -30,52 +30,46 @@ def cli() -> None:
     p.add_argument("--config", default="config.yaml")
     args = p.parse_args()
 
+    if not args.config.lower().endswith((".yaml", ".yml")):
+        raise SystemExit("Configuration must be a YAML file")
+
     cfg = yaml.safe_load(open(args.config))
     schema = SchemaLoader.load_schema()
 
-    log.info("Loaded %d tables from DB\n---", len(schema))
-    
-    openai.api_key = os.getenv("OPENAI_API_KEY")
-    if not openai.api_key:
-        raise RuntimeError("Set OPENAI_API_KEY first")
-
-    validator = SQLValidator()
-
-    for phase in cfg["phases"][:1]:  # just the first phase for now
-        log.info("\n=== Phase: %s ===", phase['name'])
-        question = "Give me the total number of patients"  # stub NL question
-        prompt = build_prompt(question, schema, phase)
-
-        response = openai.chat.completions.create(
-            model=cfg["openai_model"],
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.2,
-        )
-        raw_sql = response.choices[0].message.content.strip().strip("`")
-        sql = re.sub(r"(?i)^sql\s*", "", raw_sql)
-
-        ok, err = validator.check(sql)
-        log.info("📝 NL question: %s", question)
-        log.info("🏗️  Generated SQL: %s", sql)
-        if ok:
-            log.info("✅ Valid")
-        else:
-            log.info("❌ Invalid: %s", err)
-        break  # one sample is enough for this milestone
+    client = ResponsesClient(model=cfg["openai_model"], budget_usd=cfg["budget_usd"])
+    job = AutonomousJob(
+        schema,
+        client=client,
+        validator=SQLValidator(),
+        critic=Critic(client=client),
+        writer=ResultWriter(),
+    )
+    tasks = load_tasks(args.config)
+    for res in job.run_tasks(tasks[:1]):
+        log.info(json.dumps({"question": res.question, "sql": res.sql}))
 
 
 @app.command()
-def gen(file: str, config: str = "config.yaml") -> None:
-    """Generate SQL and rows for questions listed in ``file``."""
+def gen(config: str = "config.yaml", stream: bool = False) -> None:
+    """Generate SQL and result rows for tasks defined in ``config``."""
+
+    if not config.lower().endswith((".yaml", ".yml")):
+        raise typer.BadParameter("Configuration must be YAML")
+
     cfg = yaml.safe_load(open(config))
     schema = SchemaLoader.load_schema()
 
-    questions = [q.strip() for q in open(file, "r", encoding="utf-8") if q.strip()]
-    job = AutonomousJob(schema, cfg.get("phases", [{}])[0])
-    results = job.run_async(questions)
+    client = ResponsesClient(model=cfg["openai_model"], budget_usd=cfg["budget_usd"])
+    job = AutonomousJob(
+        schema,
+        client=client,
+        validator=SQLValidator(),
+        critic=Critic(client=client),
+        writer=ResultWriter(),
+    )
+
+    tasks = load_tasks(config)
+    results = job.run_tasks(tasks)
     for r in results:
         typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))
 
