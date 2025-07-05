@@ -24,8 +24,9 @@ pip install -r nl_sql_generator/requirements.txt
 export DATABASE_URL="postgresql://user:pass@host:5432/db"
 export OPENAI_API_KEY="sk-..."
 
-# generate via CLI
+# generate via CLI (tasks come from config.yaml)
 python -m nl_sql_generator.main gen --config config.yaml
+# no separate questions file is needed
 
 # or from Python
 from nl_sql_generator import AutonomousJob, SchemaLoader, load_tasks
@@ -38,12 +39,13 @@ print(result.sql, result.rows)
 
 ## 🔌 How it works
 
-1. **main.AutonomousJob** – orchestrates the flow
-2. **SchemaLoader** – pulls table metadata
-3. **PromptBuilder** – crafts the few-shot prompt
-4. **ResponsesClient** – queries OpenAI
-5. **SQLValidator** – checks syntax via `EXPLAIN`
-6. **Critic** – reviews and optionally fixes SQL
-7. **Writer** – executes and fakes result rows
+1. **InputLoader** – loads tasks from `config.yaml`
+2. **AutonomousJob** – orchestrates the flow
+3. **SchemaLoader** – pulls table metadata
+4. **PromptBuilder** – crafts the few-shot prompt
+5. **ResponsesClient** – queries OpenAI
+6. **SQLValidator** – checks syntax via `EXPLAIN`
+7. **Critic** – reviews and optionally fixes SQL
+8. **Writer** – executes and fakes result rows
 
 All configuration lives in `config.yaml`.
