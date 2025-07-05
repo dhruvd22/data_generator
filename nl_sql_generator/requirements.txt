@@ -64,6 +64,7 @@ python-dateutil>=2.9.0.post0
 pytz>=2025.2
 PyYAML>=6.0.2
 regex>=2024.11.6
+rich>=13.7.1
 requests>=2.32.4
 requests-toolbelt>=1.0.0
 safetensors>=0.5.3
