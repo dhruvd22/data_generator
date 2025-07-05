@@ -3,6 +3,10 @@ phases:
     count: 20
     builtins: [COUNT, MAX, AVG]
 
+  - name: schema_doc
+    count: 40
+
+
   - name: single_table
     count: 30
     use_sample_rows: false
