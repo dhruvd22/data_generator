@@ -4,6 +4,8 @@ This module provides ``init_logger`` to configure a logger with a pretty
 console output, a rotating log file and an optional JSONL event stream.
 The ``log_call`` decorator can be used to trace function execution.
 
+__all__ = ["Settings", "init_logger", "log_call"]
+
 Example
 -------
 >>> from nl_sql_generator.logger import init_logger, Settings, log_call

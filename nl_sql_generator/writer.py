@@ -1,3 +1,5 @@
+"""Execute SQL and anonymise result rows."""
+
 import os
 import json
 import tempfile
@@ -6,6 +8,8 @@ from typing import Any, Dict, List
 
 from sqlalchemy import create_engine, text
 from faker import Faker
+
+__all__ = ["ResultWriter"]
 
 
 class ResultWriter:
@@ -47,6 +51,7 @@ class ResultWriter:
     # internal helpers
     # ------------------------------------------------------------------
     def _fake_value(self, column: str, value: Any) -> Any:
+        """Return a deterministic fake equivalent for ``value``."""
         if value is None:
             return None
         if isinstance(value, bool):

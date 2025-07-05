@@ -1,4 +1,6 @@
-"""Builds the few-shot prompt for the LLM."""
+"""Prompt builder utilities."""
+
+__all__ = ["build_prompt"]
 
 from textwrap import dedent
 import random, json

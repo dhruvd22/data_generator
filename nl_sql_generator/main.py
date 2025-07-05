@@ -1,5 +1,7 @@
 """CLI entrypoints for the NL→SQL generator."""
 
+__all__ = ["cli", "gen"]
+
 import argparse
 import json
 import logging

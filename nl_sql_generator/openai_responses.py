@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+__all__ = ["ResponsesClient", "Usage"]
+
 import asyncio
 import os
 from dataclasses import dataclass
