@@ -25,13 +25,14 @@ export DATABASE_URL="postgresql://user:pass@host:5432/db"
 export OPENAI_API_KEY="sk-..."
 
 # generate via CLI
-python -m nl_sql_generator.main gen questions.txt
+python -m nl_sql_generator.main gen --config config.yaml
 
 # or from Python
-from nl_sql_generator import AutonomousJob, SchemaLoader
+from nl_sql_generator import AutonomousJob, SchemaLoader, load_tasks
 schema = SchemaLoader.load_schema()
 job = AutonomousJob(schema)
-result = job.run_sync("count the patients")
+tasks = load_tasks("config.yaml")
+result = job.run_task(tasks[0])
 print(result.sql, result.rows)
 ```
 

@@ -54,20 +54,41 @@ class ResponsesClient:
         self._max_parallel = int(os.getenv("OPENAI_MAX_PARALLEL", "5"))
         self._sem = asyncio.Semaphore(self._max_parallel)
 
-    def run_jobs(self, messages_list: List[List[dict]], stream: bool = False) -> List[str]:
+    def run_jobs(
+        self,
+        messages_list: List[List[dict]],
+        stream: bool = False,
+        tools: List[dict] | None = None,
+        return_message: bool = False,
+    ) -> List[Any]:
         """Execute a batch of message lists and return the responses."""
 
         async def runner() -> List[str]:
-            tasks = [asyncio.create_task(self._worker(m, stream)) for m in messages_list]
+            tasks = [
+                asyncio.create_task(self._worker(m, stream, tools, return_message))
+                for m in messages_list
+            ]
             return await asyncio.gather(*tasks)
 
         return asyncio.run(runner())
 
-    async def _worker(self, messages: List[dict], stream: bool) -> str:
+    async def _worker(
+        self,
+        messages: List[dict],
+        stream: bool,
+        tools: List[dict] | None,
+        return_message: bool,
+    ) -> Any:
         async with self._sem:
-            return await self._request_with_retry(messages, stream)
+            return await self._request_with_retry(messages, stream, tools, return_message)
 
-    async def _request_with_retry(self, messages: List[dict], stream: bool) -> str:
+    async def _request_with_retry(
+        self,
+        messages: List[dict],
+        stream: bool,
+        tools: List[dict] | None,
+        return_message: bool,
+    ) -> Any:
         delay = 1.0
         for attempt in range(5):
             try:
@@ -75,6 +96,8 @@ class ResponsesClient:
                     response = await self._client.chat.completions.create(
                         model=self.model,
                         messages=messages,
+                        tools=tools,
+                        tool_choice="auto" if tools else None,
                         stream=True,
                     )
                     text = ""
@@ -85,8 +108,10 @@ class ResponsesClient:
                     response = await self._client.chat.completions.create(
                         model=self.model,
                         messages=messages,
+                        tools=tools,
+                        tool_choice="auto" if tools else None,
                     )
-                    text = response.choices[0].message.content
+                    message = response.choices[0].message
                     usage = response.usage
 
                 in_tok = getattr(usage, "input_tokens", getattr(usage, "prompt_tokens", 0)) or 0
@@ -100,6 +125,11 @@ class ResponsesClient:
                 self.tokens_out += out_tok
                 self.cost_spent += est_cost
                 self.usage.add(in_tok, out_tok, est_cost)
+                if return_message:
+                    if stream:
+                        msg = {"role": "assistant", "content": text}
+                        return msg
+                    return message
                 return text
 
             except Exception:

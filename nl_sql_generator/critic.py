@@ -29,8 +29,10 @@ class Critic:
         with open(log_path, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(data, ensure_ascii=False) + "\n")
 
-    def review(self, question: str, sql_candidate: str, schema_markdown: str) -> str:
-        """Return vetted SQL, applying model fixes when score < 0.7."""
+    def review(
+        self, question: str, sql_candidate: str, schema_markdown: str
+    ) -> Dict[str, Any]:
+        """Return critic assessment with optional fixes."""
         messages: List[Dict[str, str]] = [
             {
                 "role": "system",
@@ -62,4 +64,4 @@ class Critic:
 
         score = float(result.get("score", 0))
         fixed_sql = str(result.get("fixed_sql", sql_candidate))
-        return fixed_sql if score < 0.7 else sql_candidate
+        return {"fixed_sql": fixed_sql, "score": score}

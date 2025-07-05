@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Callable
+
+from .input_loader import NLTask
 
 from .prompt_builder import build_prompt, _schema_as_markdown
 from .openai_responses import ResponsesClient
@@ -28,7 +31,7 @@ class JobResult:
 
 
 class AutonomousJob:
-    """Run the NL→SQL pipeline for one or more questions."""
+    """Run the NL→SQL pipeline driven by the OpenAI tools API."""
 
     def __init__(
         self,
@@ -46,53 +49,156 @@ class AutonomousJob:
         self.critic = critic or Critic(client=self.client)
         self.writer = writer or ResultWriter()
 
+        self._tool_map: Dict[str, Callable[..., Any]] = {
+            "generate_sql": self._tool_generate_sql,
+            "validate_sql": self._tool_validate_sql,
+            "critic": self._tool_critic,
+            "writer": self._tool_writer,
+        }
+
+        self._tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "generate_sql",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"nl_question": {"type": "string"}},
+                        "required": ["nl_question"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "validate_sql",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"sql": {"type": "string"}},
+                        "required": ["sql"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "critic",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"sql": {"type": "string"}},
+                        "required": ["sql"],
+                    },
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "writer",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "sql": {"type": "string"},
+                            "n_rows": {"type": "integer", "default": 5},
+                        },
+                        "required": ["sql"],
+                    },
+                },
+            },
+        ]
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
     @log_call
-    def _generate_sql(self, question: str) -> str:
-        """Generate SQL for ``question`` using the LLM."""
-
-        prompt = build_prompt(question, self.schema, self.phase_cfg)
+    def _tool_generate_sql(self, nl_question: str) -> str:
+        """LLM tool: generate SQL for ``nl_question``."""
+        prompt = build_prompt(nl_question, self.schema, self.phase_cfg)
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
         ]
         sql = self.client.run_jobs([messages])[0]
         sql = sql.strip().strip("`")
-        sql = re.sub(r"(?i)^sql\s*", "", sql)
-        return sql
+        return re.sub(r"(?i)^sql\s*", "", sql)
+
+    @log_call
+    def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
+        """LLM tool: validate SQL via :class:`SQLValidator`."""
+        ok, err = self.validator.check(sql)
+        return {"ok": ok, "error": err}
+
+    @log_call
+    def _tool_critic(self, sql: str) -> Dict[str, Any]:
+        """LLM tool: run the critic."""
+        result = self.critic.review("", sql, _schema_as_markdown(self.schema))
+        return result
+
+    @log_call
+    def _tool_writer(self, sql: str, n_rows: int = 5) -> List[Dict[str, Any]]:
+        """LLM tool: execute SQL and return fake rows."""
+        return self.writer.fetch(sql, n_rows)
 
     # ------------------------------------------------------------------
     # main entrypoints
     # ------------------------------------------------------------------
     @log_call
-    def run_sync(self, nl_question: str) -> JobResult:
-        """Process a single question synchronously."""
-        sql = self._generate_sql(nl_question)
-        ok, err = self.validator.check(sql)
-        if not ok:
-            raise RuntimeError(f"Invalid SQL: {err}")
+    def run_task(self, task: NLTask) -> JobResult:
+        """Process ``task`` letting the LLM drive via tools."""
+        import json
 
-        sql = self.critic.review(nl_question, sql, _schema_as_markdown(self.schema))
-        ok, err = self.validator.check(sql)
-        if not ok:
-            raise RuntimeError(f"Invalid SQL after critic: {err}")
+        self.phase_cfg = task.get("metadata", {})
 
-        rows = self.writer.fetch(sql)
-        return JobResult(nl_question, sql, rows)
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a data-engineer agent. Here is the schema:\n"
+                    f"{_schema_as_markdown(self.schema)}"
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "phase": task["phase"],
+                        "question": task["question"],
+                        **task.get("metadata", {}),
+                        "budget_left": self.client.remaining_budget(),
+                    }
+                ),
+            },
+        ]
+
+        while True:
+            msg = self.client.run_jobs([messages], tools=self._tools, return_message=True)[0]
+            tool_calls = getattr(msg, "tool_calls", None)
+            if tool_calls:
+                messages.append(msg)
+                for call in tool_calls:
+                    fn = self._tool_map.get(call.function.name)
+                    args = json.loads(call.function.arguments or "{}")
+                    result = fn(**args)
+                    messages.append(
+                        {
+                            "role": "tool",
+                            "tool_call_id": call.id,
+                            "content": json.dumps(result),
+                        }
+                    )
+                continue
+
+            content = msg.get("content") if isinstance(msg, dict) else msg.content
+            try:
+                data = json.loads(content or "{}")
+            except Exception:
+                data = {"sql": content or "", "rows": []}
+            return JobResult(task["question"], data.get("sql", ""), data.get("rows", []))
 
     @log_call
-    def run_async(self, nl_questions: List[str]) -> List[JobResult]:
-        """Process many questions concurrently."""
+    def run_tasks(self, tasks: List[NLTask]) -> List[JobResult]:
+        """Process many tasks synchronously."""
 
-        async def worker(q: str) -> JobResult:
-            # ``run_sync`` uses blocking DB + network operations so push it to a thread
-            return await asyncio.to_thread(self.run_sync, q)
-
-        async def runner() -> List[JobResult]:
-            tasks = [asyncio.create_task(worker(q)) for q in nl_questions]
-            # gather preserves order of ``nl_questions``
-            return await asyncio.gather(*tasks)
-
-        return asyncio.run(runner())
+        results = []
+        for t in tasks:
+            results.append(self.run_task(t))
+        return results
