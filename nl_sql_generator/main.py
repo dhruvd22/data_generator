@@ -1,10 +1,24 @@
-import os, random, re, openai
+"""CLI entrypoints for the NL→SQL generator."""
+
+import argparse
+import json
+import os
+import random
+import re
+import sys
+import openai
+import yaml
 from nl_sql_generator.prompt_builder import build_prompt
 from nl_sql_generator.sql_validator import SQLValidator
-import argparse, json, yaml
 from nl_sql_generator.schema_loader import SchemaLoader
+from nl_sql_generator.autonomous_job import AutonomousJob
+import typer
 
-def cli():
+app = typer.Typer(add_completion=False)
+
+
+def cli() -> None:
+    """Original quick-start demo using argparse (kept for compatibility)."""
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config.yaml")
     args = p.parse_args()
@@ -42,5 +56,22 @@ def cli():
         print("✅ Valid" if ok else f"❌ Invalid: {err}")
         break  # one sample is enough for this milestone
 
+
+@app.command()
+def gen(file: str, config: str = "config.yaml") -> None:
+    """Generate SQL and rows for questions listed in ``file``."""
+    cfg = yaml.safe_load(open(config))
+    schema = SchemaLoader.load_schema()
+
+    questions = [q.strip() for q in open(file, "r", encoding="utf-8") if q.strip()]
+    job = AutonomousJob(schema, cfg.get("phases", [{}])[0])
+    results = job.run_async(questions)
+    for r in results:
+        typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))
+
 if __name__ == "__main__":
-    cli()
+    if len(sys.argv) > 1 and sys.argv[1] == "gen":
+        # Delegate to Typer when subcommand is provided
+        app()
+    else:
+        cli()
