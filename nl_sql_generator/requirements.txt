@@ -12,6 +12,7 @@ dill>=0.3.8
 distro>=1.9.0
 filelock>=3.18.0
 frozenlist>=1.7.0
+faker>=18.13.0
 fsspec>=2025.3.0
 greenlet>=3.2.3
 h11>=0.16.0
