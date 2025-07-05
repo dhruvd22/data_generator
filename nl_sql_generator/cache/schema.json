@@ -1,754 +1,756 @@
 {
-  "procedures": {
-    "name": "procedures",
-    "columns": [
-      {
-        "name": "DATE",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BASE_COST",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "REASONCODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "REASONDESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "payers": {
-    "name": "payers",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "NAME",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ADDRESS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "CITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "STATE_HEADQUARTERED",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ZIP",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "PHONE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "AMOUNT_COVERED",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "AMOUNT_UNCOVERED",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "REVENUE",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "COVERED_ENCOUNTERS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UNCOVERED_ENCOUNTERS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "COVERED_MEDICATIONS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UNCOVERED_MEDICATIONS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "COVERED_PROCEDURES",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UNCOVERED_PROCEDURES",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "COVERED_IMMUNIZATIONS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UNCOVERED_IMMUNIZATIONS",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UNIQUE_CUSTOMERS",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "QOLS_AVG",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "MEMBER_MONTHS",
-        "type_": "INTEGER"
-      }
-    ]
-  },
-  "encounters": {
-    "name": "encounters",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "START",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "STOP",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ORGANIZATION",
-        "type_": "UUID"
-      },
-      {
-        "name": "PROVIDER",
-        "type_": "UUID"
-      },
-      {
-        "name": "PAYER",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTERCLASS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "CODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BASE_ENCOUNTER_COST",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "TOTAL_CLAIM_COST",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "PAYER_COVERAGE",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "REASONCODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "REASONDESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "supplies": {
-    "name": "supplies",
-    "columns": [
-      {
-        "name": "DATE",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "QUANTITY",
-        "type_": "INTEGER"
-      }
-    ]
-  },
-  "patients": {
-    "name": "patients",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "BIRTHDATE",
-        "type_": "DATE"
-      },
-      {
-        "name": "DEATHDATE",
-        "type_": "DATE"
-      },
-      {
-        "name": "SSN",
-        "type_": "TEXT"
-      },
-      {
-        "name": "DRIVERS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "PASSPORT",
-        "type_": "TEXT"
-      },
-      {
-        "name": "PREFIX",
-        "type_": "TEXT"
-      },
-      {
-        "name": "FIRST",
-        "type_": "TEXT"
-      },
-      {
-        "name": "LAST",
-        "type_": "TEXT"
-      },
-      {
-        "name": "SUFFIX",
-        "type_": "TEXT"
-      },
-      {
-        "name": "MAIDEN",
-        "type_": "TEXT"
-      },
-      {
-        "name": "MARITAL",
-        "type_": "TEXT"
-      },
-      {
-        "name": "RACE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ETHNICITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "GENDER",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BIRTHPLACE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ADDRESS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "CITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "STATE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "COUNTY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ZIP",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "LAT",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "LON",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "HEALTHCARE_EXPENSES",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "HEALTHCARE_COVERAGE",
-        "type_": "NUMERIC"
-      }
-    ]
-  },
-  "payer_transitions": {
-    "name": "payer_transitions",
-    "columns": [
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "START_YEAR",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "END_YEAR",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "PAYER",
-        "type_": "UUID"
-      },
-      {
-        "name": "OWNERSHIP",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "providers": {
-    "name": "providers",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "ORGANIZATION",
-        "type_": "UUID"
-      },
-      {
-        "name": "NAME",
-        "type_": "TEXT"
-      },
-      {
-        "name": "GENDER",
-        "type_": "TEXT"
-      },
-      {
-        "name": "SPECIALITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ADDRESS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "CITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "STATE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ZIP",
-        "type_": "TEXT"
-      },
-      {
-        "name": "LAT",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "LON",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UTILIZATION",
-        "type_": "BIGINT"
-      }
-    ]
-  },
-  "devices": {
-    "name": "devices",
-    "columns": [
-      {
-        "name": "STOP",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "UDI",
-        "type_": "TEXT"
-      },
-      {
-        "name": "START",
-        "type_": "TIMESTAMP"
-      }
-    ]
-  },
-  "imaging_studies": {
-    "name": "imaging_studies",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "DATE",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "BODYSITE_CODE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BODYSITE_DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "MODALITY_CODE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "MODALITY_DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "SOP_CODE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "SOP_DESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "allergies": {
-    "name": "allergies",
-    "columns": [
-      {
-        "name": "START",
-        "type_": "DATE"
-      },
-      {
-        "name": "STOP",
-        "type_": "DATE"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "organizations": {
-    "name": "organizations",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "NAME",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ADDRESS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "CITY",
-        "type_": "TEXT"
-      },
-      {
-        "name": "STATE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "ZIP",
-        "type_": "TEXT"
-      },
-      {
-        "name": "LAT",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "LON",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "PHONE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "REVENUE",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "UTILIZATION",
-        "type_": "INTEGER"
-      }
-    ]
-  },
-  "immunizations": {
-    "name": "immunizations",
-    "columns": [
-      {
-        "name": "DATE",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BASE_COST",
-        "type_": "NUMERIC"
-      }
-    ]
-  },
-  "careplans": {
-    "name": "careplans",
-    "columns": [
-      {
-        "name": "Id",
-        "type_": "UUID"
-      },
-      {
-        "name": "START",
-        "type_": "DATE"
-      },
-      {
-        "name": "STOP",
-        "type_": "DATE"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "REASONCODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "REASONDESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "observations": {
-    "name": "observations",
-    "columns": [
-      {
-        "name": "DATE",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "VALUE",
-        "type_": "TEXT"
-      },
-      {
-        "name": "UNITS",
-        "type_": "TEXT"
-      },
-      {
-        "name": "TYPE",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "conditions": {
-    "name": "conditions",
-    "columns": [
-      {
-        "name": "START",
-        "type_": "DATE"
-      },
-      {
-        "name": "STOP",
-        "type_": "DATE"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      }
-    ]
-  },
-  "medications": {
-    "name": "medications",
-    "columns": [
-      {
-        "name": "START",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "STOP",
-        "type_": "TIMESTAMP"
-      },
-      {
-        "name": "PATIENT",
-        "type_": "UUID"
-      },
-      {
-        "name": "ENCOUNTER",
-        "type_": "UUID"
-      },
-      {
-        "name": "CODE",
-        "type_": "INTEGER"
-      },
-      {
-        "name": "DESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "BASE_COST",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "PAYER_COVERAGE",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "DISPENSES",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "TOTALCOST",
-        "type_": "NUMERIC"
-      },
-      {
-        "name": "REASONCODE",
-        "type_": "BIGINT"
-      },
-      {
-        "name": "REASONDESCRIPTION",
-        "type_": "TEXT"
-      },
-      {
-        "name": "PAYER",
-        "type_": "UUID"
-      }
-    ]
+  "tables": {
+    "procedures": {
+      "columns": {
+        "DATE": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BASE_COST": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "REASONCODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "REASONDESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "payers": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "NAME": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ADDRESS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "CITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "STATE_HEADQUARTERED": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ZIP": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "PHONE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "AMOUNT_COVERED": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "AMOUNT_UNCOVERED": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "REVENUE": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "COVERED_ENCOUNTERS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UNCOVERED_ENCOUNTERS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "COVERED_MEDICATIONS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UNCOVERED_MEDICATIONS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "COVERED_PROCEDURES": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UNCOVERED_PROCEDURES": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "COVERED_IMMUNIZATIONS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UNCOVERED_IMMUNIZATIONS": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UNIQUE_CUSTOMERS": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "QOLS_AVG": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "MEMBER_MONTHS": {
+          "type": "INTEGER",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "encounters": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "START": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "STOP": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ORGANIZATION": {
+          "type": "UUID",
+          "comment": null
+        },
+        "PROVIDER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "PAYER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTERCLASS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "CODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BASE_ENCOUNTER_COST": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "TOTAL_CLAIM_COST": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "PAYER_COVERAGE": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "REASONCODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "REASONDESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": "Id"
+    },
+    "supplies": {
+      "columns": {
+        "DATE": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "QUANTITY": {
+          "type": "INTEGER",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "patients": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "BIRTHDATE": {
+          "type": "DATE",
+          "comment": null
+        },
+        "DEATHDATE": {
+          "type": "DATE",
+          "comment": null
+        },
+        "SSN": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "DRIVERS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "PASSPORT": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "PREFIX": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "FIRST": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "LAST": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "SUFFIX": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "MAIDEN": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "MARITAL": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "RACE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ETHNICITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "GENDER": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BIRTHPLACE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ADDRESS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "CITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "STATE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "COUNTY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ZIP": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "LAT": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "LON": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "HEALTHCARE_EXPENSES": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "HEALTHCARE_COVERAGE": {
+          "type": "NUMERIC",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "payer_transitions": {
+      "columns": {
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "START_YEAR": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "END_YEAR": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "PAYER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "OWNERSHIP": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "providers": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ORGANIZATION": {
+          "type": "UUID",
+          "comment": null
+        },
+        "NAME": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "GENDER": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "SPECIALITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ADDRESS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "CITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "STATE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ZIP": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "LAT": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "LON": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UTILIZATION": {
+          "type": "BIGINT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "devices": {
+      "columns": {
+        "STOP": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "UDI": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "START": {
+          "type": "TIMESTAMP",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "imaging_studies": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "DATE": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "BODYSITE_CODE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BODYSITE_DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "MODALITY_CODE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "MODALITY_DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "SOP_CODE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "SOP_DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": "Id"
+    },
+    "allergies": {
+      "columns": {
+        "START": {
+          "type": "DATE",
+          "comment": null
+        },
+        "STOP": {
+          "type": "DATE",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "organizations": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "NAME": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ADDRESS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "CITY": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "STATE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "ZIP": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "LAT": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "LON": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "PHONE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "REVENUE": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "UTILIZATION": {
+          "type": "INTEGER",
+          "comment": null
+        }
+      },
+      "primary_key": "Id"
+    },
+    "immunizations": {
+      "columns": {
+        "DATE": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BASE_COST": {
+          "type": "NUMERIC",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "careplans": {
+      "columns": {
+        "Id": {
+          "type": "UUID",
+          "comment": null
+        },
+        "START": {
+          "type": "DATE",
+          "comment": null
+        },
+        "STOP": {
+          "type": "DATE",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "REASONCODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "REASONDESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": "Id"
+    },
+    "observations": {
+      "columns": {
+        "DATE": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "VALUE": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "UNITS": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "TYPE": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "conditions": {
+      "columns": {
+        "START": {
+          "type": "DATE",
+          "comment": null
+        },
+        "STOP": {
+          "type": "DATE",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    },
+    "medications": {
+      "columns": {
+        "START": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "STOP": {
+          "type": "TIMESTAMP",
+          "comment": null
+        },
+        "PATIENT": {
+          "type": "UUID",
+          "comment": null
+        },
+        "ENCOUNTER": {
+          "type": "UUID",
+          "comment": null
+        },
+        "CODE": {
+          "type": "INTEGER",
+          "comment": null
+        },
+        "DESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "BASE_COST": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "PAYER_COVERAGE": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "DISPENSES": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "TOTALCOST": {
+          "type": "NUMERIC",
+          "comment": null
+        },
+        "REASONCODE": {
+          "type": "BIGINT",
+          "comment": null
+        },
+        "REASONDESCRIPTION": {
+          "type": "TEXT",
+          "comment": null
+        },
+        "PAYER": {
+          "type": "UUID",
+          "comment": null
+        }
+      },
+      "primary_key": null
+    }
   }
 }
