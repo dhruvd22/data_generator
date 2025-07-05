@@ -1,7 +1,6 @@
 # data_generator
 
-**LLM-ready SQL data generator.** Feed it plain-English questions and get vetted
-PostgreSQL queries plus anonymised result rows. The pipeline guards budget via an
+**LLM-ready SQL data generator.** That automatically drives through various phases as per config.yaml and generates NL to PostgreSQL datasets plus anonymised result rows. The pipeline guards budget via an
 OpenAI cost tracker and modular phases that you can swap out or extend. Use it
 to produce high quality NL ⇢ SQL ⇢ answer triples for training or evaluation.
 
