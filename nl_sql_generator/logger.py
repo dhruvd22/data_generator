@@ -42,10 +42,11 @@ class Settings:
 def init_logger(settings: Settings | None = None) -> logging.Logger:
     """Configure and return the package logger.
 
-    Parameters
-    ----------
-    settings:
-        Optional :class:`Settings` to enable the JSONL event stream.
+    Args:
+        settings: Optional :class:`Settings` to enable the JSONL event stream.
+
+    Returns:
+        Configured :class:`logging.Logger` instance.
     """
 
     settings = settings or Settings()
@@ -94,9 +95,17 @@ def init_logger(settings: Settings | None = None) -> logging.Logger:
 
 
 def log_call(func: Callable) -> Callable:
-    """Decorator that logs function calls and execution time."""
+    """Decorator that logs function calls and execution time.
+
+    Args:
+        func: Function to wrap.
+
+    Returns:
+        Wrapped callable with logging side effects.
+    """
 
     if asyncio.iscoroutinefunction(func):
+
         @wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             log = logging.getLogger(func.__module__)
@@ -111,8 +120,10 @@ def log_call(func: Callable) -> Callable:
                 elapsed = perf_counter() - start
                 log.exception("%s failed after %.2fs", func.__name__, elapsed)
                 raise
+
         return async_wrapper
     else:
+
         @wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             log = logging.getLogger(func.__module__)
@@ -127,4 +138,5 @@ def log_call(func: Callable) -> Callable:
                 elapsed = perf_counter() - start
                 log.exception("%s failed after %.2fs", func.__name__, elapsed)
                 raise
+
         return wrapper

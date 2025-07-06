@@ -1,4 +1,14 @@
-"""Configuration-driven NL task loader."""
+"""Configuration-driven NL task loader.
+
+This module reads ``config.yaml`` style files and expands each phase into a list
+of :class:`NLTask` objects. Phases can define explicit questions or instruct the
+loader to generate function-specific prompts.
+
+Example:
+    >>> tasks = load_tasks("config.yaml")
+    >>> tasks[0]["question"]
+    'Write a query using COUNT on patients'
+"""
 
 from __future__ import annotations
 
@@ -8,7 +18,13 @@ import yaml
 
 
 class NLTask(TypedDict):
-    """A single natural-language question with context."""
+    """A single natural-language question with context.
+
+    Attributes:
+        phase: Phase name the task belongs to.
+        question: The NL question text.
+        metadata: Extra parameters controlling generation.
+    """
 
     phase: str
     question: str
@@ -20,16 +36,18 @@ def load_tasks(
     schema: Dict[str, Any] | None = None,
     phase: str | None = None,
 ) -> List[NLTask]:
-    """Return a list of :class:`NLTask` parsed from ``config_path``.
+    """Return tasks parsed from a configuration file.
 
-    Parameters
-    ----------
-    config_path:
-        Path to a YAML configuration file.
-    schema:
-        Optional mapping of table names used to craft questions.
-    phase:
-        If provided, only tasks for this phase are returned.
+    Args:
+        config_path: Path to the YAML configuration file.
+        schema: Optional mapping of table metadata used for placeholders.
+        phase: If provided, only tasks for this phase are returned.
+
+    Returns:
+        A list of :class:`NLTask` dictionaries.
+
+    Raises:
+        ValueError: If the configuration file is invalid YAML.
     """
     try:
         with open(config_path, "r", encoding="utf-8") as fh:
@@ -70,11 +88,7 @@ def load_tasks(
         if isinstance(builtins_spec, dict):
             for fn, cnt in builtins_spec.items():
                 for i in range(int(cnt or 5)):
-                    table = (
-                        random.choice(table_names)
-                        if table_names
-                        else f"table_{i + 1}"
-                    )
+                    table = random.choice(table_names) if table_names else f"table_{i + 1}"
                     q = f"Write a query using {fn} on {table}"
                     meta_with_fn = {**meta, "builtins": [fn]}
                     tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
@@ -84,11 +98,7 @@ def load_tasks(
             if count:
                 for i in range(count):
                     builtin = random.choice(builtins_spec)
-                    table = (
-                        random.choice(table_names)
-                        if table_names
-                        else f"table_{i + 1}"
-                    )
+                    table = random.choice(table_names) if table_names else f"table_{i + 1}"
                     q = f"Write a query using {builtin} on {table}"
                     meta_with_fn = {**meta, "builtins": [builtin]}
                     tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
@@ -96,11 +106,7 @@ def load_tasks(
             else:
                 for fn in builtins_spec:
                     for i in range(5):
-                        table = (
-                            random.choice(table_names)
-                            if table_names
-                            else f"table_{i + 1}"
-                        )
+                        table = random.choice(table_names) if table_names else f"table_{i + 1}"
                         q = f"Write a query using {fn} on {table}"
                         meta_with_fn = {**meta, "builtins": [fn]}
                         tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})

@@ -60,3 +60,13 @@ dependencies, install ``pytest`` and run the tests from the repository root:
 pip install pytest
 pytest -q
 ```
+
+## Development
+
+Formatting and linting are enforced with **black** and **ruff**. Run the
+following before committing changes:
+
+```bash
+black --line-length 100 .
+ruff check --fix .
+```

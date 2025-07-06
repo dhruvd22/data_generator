@@ -1,10 +1,23 @@
+"""Autonomous NL→SQL workflow orchestrator.
+
+This module exposes :class:`AutonomousJob` which coordinates the prompt
+generation, SQL validation and result fetching steps. It ties together the
+``ResponsesClient`` and other helpers to execute the end-to-end pipeline.
+
+Example:
+    >>> from nl_sql_generator.autonomous_job import AutonomousJob
+    >>> job = AutonomousJob(schema)
+    >>> result = job.run_task({"phase": "demo", "question": "list payers"})
+    >>> print(result.sql)
+    SELECT * FROM payers
+"""
+
 from __future__ import annotations
 
-import asyncio
 import json
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Callable
+from typing import Any, Callable, Dict, List
 import os
 
 from .input_loader import NLTask
@@ -23,7 +36,17 @@ log = logging.getLogger(__name__)
 
 
 def _clean_sql(sql: str) -> str:
-    """Return SQL without newlines or backslashes."""
+    """Return SQL without newlines or backslashes.
+
+    Args:
+        sql: Raw SQL text.
+
+    Returns:
+        Sanitised single-line SQL.
+    """
+
+    # The OpenAI API occasionally returns formatted SQL snippets. Cleaning
+    # ensures consistent validator input.
     if not isinstance(sql, str):
         return ""
     sanitized = sql.replace("\n", " ").replace("\r", " ")
@@ -34,11 +57,21 @@ def _clean_sql(sql: str) -> str:
 
 @dataclass
 class JobResult:
-    """Container for the final output of a single NL→SQL job."""
+    """Container for the final output of a single NL→SQL job.
+
+    Attributes:
+        question: The natural language question.
+        sql: SQL generated for the question.
+        rows: Fake result rows returned by the writer.
+    """
 
     question: str
     sql: str
     rows: List[Dict[str, Any]]
+
+    def __post_init__(self) -> None:
+        """Normalise SQL to a single line."""
+        self.sql = _clean_sql(self.sql)
 
 
 class AutonomousJob:
@@ -53,6 +86,17 @@ class AutonomousJob:
         critic: Critic | None = None,
         writer: ResultWriter | None = None,
     ) -> None:
+        """Create a new job instance.
+
+        Args:
+            schema: Database schema mapping.
+            phase_cfg: Configuration overrides for the current phase.
+            client: Optional :class:`ResponsesClient` instance.
+            validator: Optional :class:`SQLValidator` for syntax checks.
+            critic: Optional :class:`Critic` for SQL review.
+            writer: Optional :class:`ResultWriter` for dataset generation.
+        """
+
         self.schema = schema
         self.phase_cfg = phase_cfg or {}
         self.client = client or ResponsesClient()
@@ -161,8 +205,14 @@ class AutonomousJob:
     # ------------------------------------------------------------------
     @log_call
     def run_task(self, task: NLTask) -> JobResult:
-        """Process ``task`` letting the LLM drive via tools."""
-        import json
+        """Process ``task`` letting the LLM drive via tools.
+
+        Args:
+            task: Task dictionary from :func:`load_tasks`.
+
+        Returns:
+            Final :class:`JobResult` for the task.
+        """
 
         self.phase_cfg = task.get("metadata", {})
 
@@ -196,20 +246,14 @@ class AutonomousJob:
         )
 
         while True:
-            msg = self.client.run_jobs(
-                [messages], tools=tools, return_message=True
-            )[0]
+            msg = self.client.run_jobs([messages], tools=tools, return_message=True)[0]
             tool_calls = getattr(msg, "tool_calls", None)
             if tool_calls:
-                messages.append(
-                    msg if isinstance(msg, dict) else msg.model_dump()
-                )
+                messages.append(msg if isinstance(msg, dict) else msg.model_dump())
                 for call in tool_calls:
                     fn = self._tool_map.get(call.function.name)
                     args = json.loads(call.function.arguments or "{}")
-                    log.info(
-                        "Invoking tool %s with args %s", call.function.name, args
-                    )
+                    log.info("Invoking tool %s with args %s", call.function.name, args)
                     result = fn(**args)
                     log.info("Tool %s returned %s", call.function.name, result)
                     messages.append(
@@ -231,7 +275,14 @@ class AutonomousJob:
 
     @log_call
     def run_tasks(self, tasks: List[NLTask]) -> List[JobResult]:
-        """Process many tasks synchronously."""
+        """Process many tasks synchronously.
+
+        Args:
+            tasks: Sequence of tasks to run.
+
+        Returns:
+            List of :class:`JobResult` objects in the same order.
+        """
 
         results = []
         total = len(tasks)

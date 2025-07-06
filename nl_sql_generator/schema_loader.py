@@ -1,10 +1,21 @@
 # nl_sql_generator/schema_loader.py
-"""Database schema introspection helpers."""
+"""Database schema introspection helpers.
+
+``SchemaLoader`` connects to PostgreSQL and returns lightweight table metadata
+used by the prompt builder. The ``to_json`` helper converts that structure into
+a JSON-serialisable form.
+
+Example:
+    >>> schema = SchemaLoader.load_schema()
+    >>> list(schema)
+    ['patients', 'appointments']
+"""
 
 from dataclasses import dataclass
 from typing import Dict, List
 from sqlalchemy import create_engine, inspect
-import os, json
+import os
+import json
 import logging
 
 __all__ = ["SchemaLoader", "ColumnInfo", "TableInfo"]
@@ -14,7 +25,13 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class ColumnInfo:
-    """Metadata for a database column."""
+    """Metadata for a database column.
+
+    Attributes:
+        name: Column name.
+        type_: Type string as reported by SQLAlchemy.
+        comment: Optional column comment.
+    """
 
     name: str
     type_: str
@@ -23,7 +40,13 @@ class ColumnInfo:
 
 @dataclass
 class TableInfo:
-    """Metadata for a database table."""
+    """Metadata for a database table.
+
+    Attributes:
+        name: Table name.
+        columns: Sequence of :class:`ColumnInfo` objects.
+        primary_key: Name of the primary key column if present.
+    """
 
     name: str
     columns: List[ColumnInfo]
@@ -32,9 +55,20 @@ class TableInfo:
 
 class SchemaLoader:
     """Load table definitions from a PostgreSQL database."""
+
     @staticmethod
     def load_schema(db_url: str | None = None) -> Dict[str, TableInfo]:
-        """Return a mapping of table name to :class:`TableInfo`."""
+        """Return a mapping of table name to :class:`TableInfo`.
+
+        Args:
+            db_url: Optional PostgreSQL connection URL.
+
+        Returns:
+            Mapping of table names to their metadata.
+
+        Raises:
+            ValueError: If no database URL is provided.
+        """
         db_url = db_url or os.getenv("DATABASE_URL")
         if not db_url:
             raise ValueError("Provide DATABASE_URL env var or param")
@@ -64,9 +98,7 @@ class SchemaLoader:
         """Convert ``schema`` to a JSON-serialisable dict."""
         tables: Dict[str, dict] = {}
         for name, info in schema.items():
-            cols = {
-                c.name: {"type": c.type_, "comment": c.comment} for c in info.columns
-            }
+            cols = {c.name: {"type": c.type_, "comment": c.comment} for c in info.columns}
             tables[name] = {
                 "columns": cols,
                 "primary_key": info.primary_key,

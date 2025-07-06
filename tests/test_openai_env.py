@@ -22,4 +22,3 @@ def test_openai_env():
         openai.APIConnectionError,
     ):
         pytest.skip("OpenAI API unauthorized or unreachable")
-
