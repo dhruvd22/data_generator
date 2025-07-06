@@ -152,7 +152,8 @@ class AutonomousJob:
             {
                 "role": "system",
                 "content": (
-                    "You are a data-engineer agent. Here is the schema:\n"
+                    "You are a data-engineer agent. Column names in the database are quoted using double quotes."
+                    " Here is the schema:\n"
                     f"{_schema_as_markdown(self.schema)}"
                 ),
             },

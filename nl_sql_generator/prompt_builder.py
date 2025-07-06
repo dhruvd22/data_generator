@@ -10,7 +10,7 @@ def _schema_as_markdown(schema: Dict[str, Any]) -> str:
     """Render tables & columns as a compact markdown block."""
     lines = []
     for tbl, info in schema.items():
-        cols = ", ".join(c.name for c in info.columns)
+        cols = ", ".join(f'"{c.name}"' for c in info.columns)
         lines.append(f"- **{tbl}**: {cols}")
     return "\n".join(lines)
 
@@ -43,6 +43,7 @@ def build_prompt(
         f"""
         You are a PostgreSQL expert. Given the database schema and a question,
         output **only** the SQL query (no explanation) using valid PostgreSQL syntax.
+        All column names are quoted using double quotes; ensure your SQL does the same.
         {fn_clause}
 
         Schema:
