@@ -112,6 +112,7 @@ class ResponsesClient:
                         tool_choice="auto" if tools else None,
                     )
                     message = response.choices[0].message
+                    text = message.content or ""
                     usage = response.usage
 
                 in_tok = getattr(usage, "input_tokens", getattr(usage, "prompt_tokens", 0)) or 0
