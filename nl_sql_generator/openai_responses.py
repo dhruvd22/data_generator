@@ -105,6 +105,9 @@ class ResponsesClient:
         ]
         log.info("Prompt:\n%s", "\n".join(lines))
         for attempt in range(5):
+            log.info(
+                "OpenAI call attempt %d using model %s", attempt + 1, self.model
+            )
             try:
                 if stream:
                     response = await self._client.chat.completions.create(
@@ -129,8 +132,14 @@ class ResponsesClient:
                     text = message.content or ""
                     usage = response.usage
 
-                in_tok = getattr(usage, "input_tokens", getattr(usage, "prompt_tokens", 0)) or 0
-                out_tok = getattr(usage, "output_tokens", getattr(usage, "completion_tokens", 0)) or 0
+                in_tok = getattr(
+                    usage, "input_tokens", getattr(usage, "prompt_tokens", 0)
+                ) or 0
+                out_tok = getattr(
+                    usage,
+                    "output_tokens",
+                    getattr(usage, "completion_tokens", 0),
+                ) or 0
                 est_cost = _estimate_cost(in_tok, out_tok, self.model)
 
                 if self.cost_spent + est_cost > self.budget_usd:
@@ -140,6 +149,13 @@ class ResponsesClient:
                 self.tokens_out += out_tok
                 self.cost_spent += est_cost
                 self.usage.add(in_tok, out_tok, est_cost)
+                log.info(
+                    "OpenAI response: in=%d out=%d cost=$%.4f budget_left=$%.4f",
+                    in_tok,
+                    out_tok,
+                    est_cost,
+                    self.remaining_budget(),
+                )
                 if return_message:
                     if stream:
                         msg = {"role": "assistant", "content": text}
@@ -147,7 +163,8 @@ class ResponsesClient:
                     return message
                 return text
 
-            except Exception:
+            except Exception as err:
+                log.warning("OpenAI attempt %d failed: %s", attempt + 1, err)
                 if attempt == 4:
                     raise
                 await asyncio.sleep(delay)
