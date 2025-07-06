@@ -50,3 +50,13 @@ print(result.sql, result.rows)
 8. **Writer** – executes and fakes result rows
 
 All configuration lives in `config.yaml`.
+
+## Running tests
+
+This project ships with a small test suite. After installing the runtime
+dependencies, install ``pytest`` and run the tests from the repository root:
+
+```bash
+pip install pytest
+pytest -q
+```

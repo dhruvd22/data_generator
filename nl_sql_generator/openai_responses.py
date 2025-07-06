@@ -83,6 +83,7 @@ class ResponsesClient:
         tools: List[dict] | None,
         return_message: bool,
     ) -> Any:
+        """Execute a single request with concurrency control."""
         async with self._sem:
             return await self._request_with_retry(messages, stream, tools, return_message)
 
@@ -93,6 +94,7 @@ class ResponsesClient:
         tools: List[dict] | None,
         return_message: bool,
     ) -> Any:
+        """Call the API with exponential backoff retry logic."""
         delay = 1.0
         # Convert any OpenAI message objects to plain dicts for clean logging
         serializable = [
