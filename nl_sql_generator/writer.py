@@ -52,6 +52,14 @@ class ResultWriter:
             tmp_path = tmp.name
         os.replace(tmp_path, path)
 
+    def append_jsonl(self, row: Dict[str, Any], path: str) -> None:
+        """Append ``row`` as JSON to ``path`` creating directories when needed."""
+        directory = os.path.dirname(path) or "."
+        os.makedirs(directory, exist_ok=True)
+        with open(path, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(row))
+            fh.write("\n")
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
