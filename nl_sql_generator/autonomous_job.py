@@ -5,6 +5,7 @@ import json
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List, Callable
+import os
 
 from .input_loader import NLTask
 
@@ -202,6 +203,18 @@ class AutonomousJob:
         """Process many tasks synchronously."""
 
         results = []
-        for t in tasks:
-            results.append(self.run_task(t))
+        total = len(tasks)
+        for idx, t in enumerate(tasks, 1):
+            log.info("Running task %d/%d: %s", idx, total, t.get("question"))
+            res = self.run_task(t)
+            results.append(res)
+
+            out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
+            if out_dir:
+                path = os.path.join(out_dir, "dataset.jsonl")
+                self.writer.append_jsonl(
+                    {"question": res.question, "sql": res.sql, "rows": res.rows},
+                    path,
+                )
+                log.info("Wrote dataset entry to %s", path)
         return results
