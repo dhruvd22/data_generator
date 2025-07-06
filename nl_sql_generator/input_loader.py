@@ -50,6 +50,14 @@ def load_tasks(
             for k, v in phase_def.items()
             if k not in {"name", "questions", "count", "builtins"}
         }
+
+        if name.lower() == "sample_data":
+            n_rows = int(phase_def.get("n_rows", 2))
+            for tbl in table_names:
+                q = f"Show me {n_rows} sample rows from the {tbl} table."
+                meta_with_rows = {**meta, "n_rows": n_rows}
+                tasks.append({"phase": name, "question": q, "metadata": meta_with_rows})
+            continue
         questions = phase_def.get("questions")
         if questions:
             for q in questions:
