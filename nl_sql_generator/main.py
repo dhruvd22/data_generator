@@ -69,6 +69,7 @@ def cli() -> None:
     """Original quick-start demo using argparse (kept for compatibility)."""
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config.yaml")
+    p.add_argument("--phase", default=None)
     args = p.parse_args()
 
     if not args.config.lower().endswith((".yaml", ".yml")):
@@ -85,13 +86,17 @@ def cli() -> None:
         critic=Critic(client=client),
         writer=ResultWriter(),
     )
-    tasks = load_tasks(args.config, schema)
+    tasks = load_tasks(args.config, schema, phase=args.phase)
     for res in job.run_tasks(tasks[:1]):
         log.info(json.dumps({"question": res.question, "sql": res.sql}))
 
 
 @app.command()
-def gen(config: str = "config.yaml", stream: bool = False) -> None:
+def gen(
+    config: str = "config.yaml",
+    stream: bool = False,
+    phase: str | None = None,
+) -> None:
     """Generate SQL and result rows for tasks defined in ``config``."""
 
     if not config.lower().endswith((".yaml", ".yml")):
@@ -109,7 +114,7 @@ def gen(config: str = "config.yaml", stream: bool = False) -> None:
         writer=ResultWriter(),
     )
 
-    tasks = load_tasks(config, schema)
+    tasks = load_tasks(config, schema, phase=phase)
     results = job.run_tasks(tasks)
     for r in results:
         typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))

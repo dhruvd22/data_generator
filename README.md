@@ -25,13 +25,15 @@ export OPENAI_API_KEY="sk-..."
 
 # generate via CLI (tasks come from config.yaml)
 python -m nl_sql_generator.main gen --config config.yaml
+# run a single phase only
+# python -m nl_sql_generator.main gen --config config.yaml --phase joins
 # no separate questions file is needed
 
 # or from Python
 from nl_sql_generator import AutonomousJob, SchemaLoader, load_tasks
 schema = SchemaLoader.load_schema()
 job = AutonomousJob(schema)
-tasks = load_tasks("config.yaml")
+tasks = load_tasks("config.yaml", phase="joins")
 result = job.run_task(tasks[0])
 print(result.sql, result.rows)
 ```

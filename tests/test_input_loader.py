@@ -44,3 +44,19 @@ def test_load_tasks_invalid_yaml(tmp_path):
     with pytest.raises(ValueError):
         load_tasks(str(bad))
 
+
+def test_load_tasks_single_phase(tmp_path):
+    cfg = """
+phases:
+  - name: first
+    count: 1
+  - name: second
+    count: 2
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t": object()}, phase="second")
+    assert len(tasks) == 2
+    assert all(t["phase"] == "second" for t in tasks)
+
