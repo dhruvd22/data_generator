@@ -7,12 +7,12 @@ from nl_sql_generator.input_loader import load_tasks
 
 
 def test_load_tasks_happy(tmp_path):
-    cfg = '''
+    cfg = """
 phases:
   - name: demo
     builtins:
       COUNT: 2
-'''
+"""
     path = tmp_path / "cfg.yaml"
     path.write_text(cfg)
 
@@ -91,4 +91,3 @@ phases:
     assert len(tasks) == 2
     assert all("sample rows" in t["question"] for t in tasks)
     assert all(t["metadata"]["n_rows"] == 2 for t in tasks)
-

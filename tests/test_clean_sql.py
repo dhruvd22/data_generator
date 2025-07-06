@@ -12,4 +12,4 @@ def test_clean_sql_removes_newlines_and_backslashes():
 
 def test_clean_sql_collapses_whitespace():
     raw = "SELECT *\nFROM tbl\tWHERE id = 1"
-    assert _clean_sql(raw) == 'SELECT * FROM tbl WHERE id = 1'
+    assert _clean_sql(raw) == "SELECT * FROM tbl WHERE id = 1"

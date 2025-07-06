@@ -3,6 +3,10 @@
 Importing this package exposes commonly used classes and helpers so consumers
 can simply ``from nl_sql_generator import AutonomousJob`` without digging into
 submodules.
+
+Example:
+    >>> from nl_sql_generator import AutonomousJob
+    >>> job = AutonomousJob(schema)
 """
 
 from .autonomous_job import AutonomousJob, JobResult

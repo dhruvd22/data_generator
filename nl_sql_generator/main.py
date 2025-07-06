@@ -1,11 +1,14 @@
-"""CLI entrypoints for the NL→SQL generator."""
+"""CLI entrypoints for the NL→SQL generator.
+
+The :func:`cli` function provides a minimal argparse-based interface while
+``typer`` powers the :func:`gen` command. Both rely on ``config.yaml`` for task
+definitions.
+"""
 
 __all__ = ["cli", "gen"]
 
 import argparse
 import json
-import logging
-import os
 import sys
 
 import yaml
@@ -34,6 +37,7 @@ if "ctx" in inspect.signature(TyperArgument.make_metavar).parameters:
     # Already compatible
     pass
 else:
+
     def _patched_make_metavar(self, ctx=None):  # type: ignore[override]
         if self.metavar is not None:
             return self.metavar
@@ -66,7 +70,10 @@ app = typer.Typer(add_completion=False)
 
 
 def cli() -> None:
-    """Original quick-start demo using argparse (kept for compatibility)."""
+    """Original quick-start demo using argparse (kept for compatibility).
+
+    Reads ``config.yaml`` and prints generated SQL for the first task.
+    """
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config.yaml")
     p.add_argument("--phase", default=None)
@@ -97,7 +104,13 @@ def gen(
     stream: bool = False,
     phase: str | None = None,
 ) -> None:
-    """Generate SQL and result rows for tasks defined in ``config``."""
+    """Generate SQL and result rows for tasks defined in ``config``.
+
+    Args:
+        config: Path to configuration YAML.
+        stream: Unused placeholder for streaming.
+        phase: Optional phase name to filter tasks.
+    """
 
     if not config.lower().endswith((".yaml", ".yml")):
         raise typer.BadParameter("Configuration must be YAML")
@@ -118,6 +131,7 @@ def gen(
     results = job.run_tasks(tasks)
     for r in results:
         typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))
+
 
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "gen":

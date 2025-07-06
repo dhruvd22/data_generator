@@ -1,4 +1,13 @@
-"""Execute SQL and anonymise result rows."""
+"""Execute SQL and anonymise result rows.
+
+The :class:`ResultWriter` fetches query results and replaces sensitive data with
+deterministic fake values. This enables creating shareable datasets.
+
+Example:
+    >>> writer = ResultWriter()
+    >>> rows = writer.fetch("SELECT id, email FROM users", n_rows=2)
+    >>> writer.write_jsonl(rows, "out.jsonl")
+"""
 
 import os
 import json
@@ -16,6 +25,15 @@ class ResultWriter:
     """Execute SQL and return fake rows for privacy-preserving datasets."""
 
     def __init__(self, db_url: str | None = None) -> None:
+        """Initialise the writer.
+
+        Args:
+            db_url: Optional database URL else ``DATABASE_URL`` env variable.
+
+        Raises:
+            ValueError: If no database URL can be determined.
+        """
+
         db_url = db_url or os.getenv("DATABASE_URL")
         if not db_url:
             raise ValueError("DATABASE_URL not set")
@@ -23,7 +41,18 @@ class ResultWriter:
         self.fake = Faker()
 
     def fetch(self, sql: str, n_rows: int = 5) -> List[Dict[str, Any]]:
-        """Execute the query and return up to ``n_rows`` fake rows."""
+        """Execute the query and return up to ``n_rows`` fake rows.
+
+        Args:
+            sql: SQL statement to execute.
+            n_rows: Maximum number of rows to fetch.
+
+        Returns:
+            List of anonymised result rows.
+
+        Raises:
+            RuntimeError: If SQL execution fails.
+        """
         from sqlalchemy.exc import SQLAlchemyError
 
         with self.eng.connect() as conn:
