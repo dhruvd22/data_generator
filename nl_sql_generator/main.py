@@ -94,7 +94,7 @@ def cli() -> None:
         writer=ResultWriter(),
     )
     tasks = load_tasks(args.config, schema, phase=args.phase)
-    for res in job.run_tasks(tasks[:1]):
+    for res in job.run_tasks(tasks):
         log.info(json.dumps({"question": res.question, "sql": res.sql}))
 
 

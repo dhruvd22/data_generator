@@ -220,7 +220,7 @@ class AutonomousJob:
             {
                 "role": "system",
                 "content": (
-                    "You are a data-engineer agent. Column names in the database are quoted using double quotes. "
+                    "You are a data-engineer agent. Column names in the database are quoted using double quotes while table names are not. "
                     "Return a JSON object with only a 'sql' field containing the valid query. "
                     "Here is the schema:\n"
                     f"{_schema_as_markdown(self.schema)}"
