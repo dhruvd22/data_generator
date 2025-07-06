@@ -170,8 +170,9 @@ class AutonomousJob:
             {
                 "role": "system",
                 "content": (
-                    "You are a data-engineer agent. Column names in the database are quoted using double quotes."
-                    " Here is the schema:\n"
+                    "You are a data-engineer agent. Column names in the database are quoted using double quotes. "
+                    "Return a JSON object with only a 'sql' field containing the valid query. "
+                    "Here is the schema:\n"
                     f"{_schema_as_markdown(self.schema)}"
                 ),
             },
@@ -244,7 +245,7 @@ class AutonomousJob:
             if out_dir:
                 path = os.path.join(out_dir, "dataset.jsonl")
                 self.writer.append_jsonl(
-                    {"question": res.question, "sql": res.sql, "rows": res.rows},
+                    {"question": res.question, "sql": res.sql},
                     path,
                 )
                 log.info("Wrote dataset entry to %s", path)
