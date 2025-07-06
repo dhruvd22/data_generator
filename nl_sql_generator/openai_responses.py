@@ -94,7 +94,12 @@ class ResponsesClient:
         return_message: bool,
     ) -> Any:
         delay = 1.0
-        log.info(json.dumps({"prompt": messages}))
+        # Convert any OpenAI message objects to plain dicts for clean logging
+        serializable = [
+            m.model_dump() if hasattr(m, "model_dump") else m for m in messages
+        ]
+        log_str = json.dumps({"prompt": serializable}).replace("\n", "\\n")
+        log.info(log_str)
         for attempt in range(5):
             try:
                 if stream:

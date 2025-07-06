@@ -173,7 +173,9 @@ class AutonomousJob:
             msg = self.client.run_jobs([messages], tools=self._tools, return_message=True)[0]
             tool_calls = getattr(msg, "tool_calls", None)
             if tool_calls:
-                messages.append(msg)
+                messages.append(
+                    msg if isinstance(msg, dict) else msg.model_dump()
+                )
                 for call in tool_calls:
                     fn = self._tool_map.get(call.function.name)
                     args = json.loads(call.function.arguments or "{}")
