@@ -4,10 +4,12 @@ phases:
       COUNT: 5
       MAX: 5
       AVG: 5
+    use_sample_rows: false
     dataset_output_file_dir: generated_datasets/builtins
 
   - name: schema_doc
     count: 40
+    use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_doc
 
 
@@ -19,7 +21,13 @@ phases:
   - name: joins
     count: 25
     examples_file: fewshot/multi_table_examples.yaml
+    use_sample_rows: false
     dataset_output_file_dir: generated_datasets/joins
+
+  - name: sample_data
+    n_rows: 2
+    use_sample_rows: true
+    dataset_output_file_dir: generated_datasets/sample_data
 
 budget_usd: 2.0
 openai_model: gpt-4.1

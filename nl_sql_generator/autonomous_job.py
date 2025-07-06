@@ -138,8 +138,10 @@ class AutonomousJob:
         return result
 
     @log_call
-    def _tool_writer(self, sql: str, n_rows: int = 5) -> List[Dict[str, Any]]:
+    def _tool_writer(self, sql: str, n_rows: int | None = None) -> List[Dict[str, Any]]:
         """LLM tool: execute SQL and return fake rows."""
+        if n_rows is None:
+            n_rows = int(self.phase_cfg.get("n_rows", 5))
         log.info("Fetching %d rows for SQL", n_rows)
         return self.writer.fetch(sql, n_rows)
 
@@ -175,9 +177,16 @@ class AutonomousJob:
             },
         ]
 
+        use_rows = bool(self.phase_cfg.get("use_sample_rows", False))
+        tools = (
+            self._tools
+            if use_rows
+            else [t for t in self._tools if t["function"]["name"] != "writer"]
+        )
+
         while True:
             msg = self.client.run_jobs(
-                [messages], tools=self._tools, return_message=True
+                [messages], tools=tools, return_message=True
             )[0]
             tool_calls = getattr(msg, "tool_calls", None)
             if tool_calls:

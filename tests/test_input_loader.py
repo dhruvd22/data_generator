@@ -75,3 +75,20 @@ phases:
     assert len(tasks) == 10
     assert {t["metadata"]["builtins"][0] for t in tasks} == {"MAX", "AVG"}
 
+
+def test_sample_data_phase(tmp_path):
+    cfg = """
+phases:
+  - name: sample_data
+    n_rows: 2
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    schema = {"tbl1": object(), "tbl2": object()}
+    tasks = load_tasks(str(path), schema)
+
+    assert len(tasks) == 2
+    assert all("sample rows" in t["question"] for t in tasks)
+    assert all(t["metadata"]["n_rows"] == 2 for t in tasks)
+
