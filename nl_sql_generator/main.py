@@ -19,6 +19,47 @@ from nl_sql_generator.sql_validator import SQLValidator
 from nl_sql_generator.critic import Critic
 from nl_sql_generator.writer import ResultWriter
 import typer
+from typer.core import TyperArgument
+import click
+import inspect
+
+# ---------------------------------------------------------------------------
+# Temporary compatibility patch for Click>=8.1 where ``Parameter.make_metavar``
+# expects a ``ctx`` argument. Typer's ``TyperArgument`` implementation in
+# 0.12.x does not accept this parameter which leads to ``TypeError`` when the
+# CLI shows help or error messages on Python 3.12+. We override the method with
+# a shim that ignores the ``ctx`` parameter if present.
+# ---------------------------------------------------------------------------
+if "ctx" in inspect.signature(TyperArgument.make_metavar).parameters:
+    # Already compatible
+    pass
+else:
+    def _patched_make_metavar(self, ctx=None):  # type: ignore[override]
+        if self.metavar is not None:
+            return self.metavar
+        var = (self.name or "").upper()
+        if not self.required:
+            var = f"[{var}]"
+        type_var = self.type.get_metavar(self)
+        if type_var:
+            var += f":{type_var}"
+        if self.nargs != 1:
+            var += "..."
+        return var
+
+    TyperArgument.make_metavar = _patched_make_metavar  # type: ignore[assignment]
+
+# If Click's ``Parameter.make_metavar`` requires a ``ctx`` argument, wrap it so
+# calls without ``ctx`` still work. Some versions of Typer call this method
+# without arguments.
+if "ctx" in inspect.signature(click.core.Parameter.make_metavar).parameters:
+    _orig_param_make_metavar = click.core.Parameter.make_metavar
+
+    def _param_make_metavar(self, ctx=None):  # type: ignore[override]
+        ctx = ctx or click.Context(click.Command("_dummy"))
+        return _orig_param_make_metavar(self, ctx)
+
+    click.core.Parameter.make_metavar = _param_make_metavar  # type: ignore[assignment]
 
 log = init_logger()
 app = typer.Typer(add_completion=False)
