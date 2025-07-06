@@ -98,8 +98,12 @@ class ResponsesClient:
         serializable = [
             m.model_dump() if hasattr(m, "model_dump") else m for m in messages
         ]
-        log_str = json.dumps({"prompt": serializable}).replace("\n", "\\n")
-        log.info(log_str)
+
+        # Log the prompt without JSON escape sequences
+        lines = [
+            f"{m.get('role')}: {m.get('content', '')}" for m in serializable
+        ]
+        log.info("Prompt:\n%s", "\n".join(lines))
         for attempt in range(5):
             try:
                 if stream:
