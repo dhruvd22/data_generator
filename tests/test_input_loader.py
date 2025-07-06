@@ -16,10 +16,12 @@ phases:
     path = tmp_path / "cfg.yaml"
     path.write_text(cfg)
 
-    tasks = load_tasks(str(path))
+    schema = {"patients": object()}
+    tasks = load_tasks(str(path), schema)
     assert len(tasks) == 2
     assert tasks[0]["phase"] == "demo"
     assert "question" in tasks[0]
+    assert "patients" in tasks[0]["question"]
 
 
 def test_load_tasks_invalid_yaml(tmp_path):
