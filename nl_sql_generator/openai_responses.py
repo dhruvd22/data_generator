@@ -10,6 +10,10 @@ from dataclasses import dataclass
 from typing import List
 
 from openai import AsyncOpenAI, OpenAI
+import json
+import logging
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -90,6 +94,7 @@ class ResponsesClient:
         return_message: bool,
     ) -> Any:
         delay = 1.0
+        log.info(json.dumps({"prompt": messages}))
         for attempt in range(5):
             try:
                 if stream:

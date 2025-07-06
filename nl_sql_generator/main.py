@@ -44,7 +44,7 @@ def cli() -> None:
         critic=Critic(client=client),
         writer=ResultWriter(),
     )
-    tasks = load_tasks(args.config)
+    tasks = load_tasks(args.config, schema)
     for res in job.run_tasks(tasks[:1]):
         log.info(json.dumps({"question": res.question, "sql": res.sql}))
 
@@ -68,7 +68,7 @@ def gen(config: str = "config.yaml", stream: bool = False) -> None:
         writer=ResultWriter(),
     )
 
-    tasks = load_tasks(config)
+    tasks = load_tasks(config, schema)
     results = job.run_tasks(tasks)
     for r in results:
         typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))
