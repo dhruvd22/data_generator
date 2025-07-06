@@ -24,6 +24,20 @@ phases:
     assert "patients" in tasks[0]["question"]
 
 
+def test_metadata_includes_output_dir(tmp_path):
+    cfg = """
+phases:
+  - name: demo
+    count: 1
+    dataset_output_file_dir: out/demo
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t": object()})
+    assert tasks[0]["metadata"]["dataset_output_file_dir"] == "out/demo"
+
+
 def test_load_tasks_invalid_yaml(tmp_path):
     bad = tmp_path / "bad.yaml"
     bad.write_text("::notyaml")

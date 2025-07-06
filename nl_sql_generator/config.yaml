@@ -2,18 +2,22 @@ phases:
   - name: builtins
     count: 20
     builtins: [COUNT, MAX, AVG]
+    dataset_output_file_dir: generated_datasets/builtins
 
   - name: schema_doc
     count: 40
+    dataset_output_file_dir: generated_datasets/schema_doc
 
 
   - name: single_table
     count: 30
     use_sample_rows: false
+    dataset_output_file_dir: generated_datasets/single_table
 
   - name: joins
     count: 25
     examples_file: fewshot/multi_table_examples.yaml
+    dataset_output_file_dir: generated_datasets/joins
 
 budget_usd: 2.0
 openai_model: gpt-4.1

@@ -24,10 +24,15 @@ class ResultWriter:
 
     def fetch(self, sql: str, n_rows: int = 5) -> List[Dict[str, Any]]:
         """Execute the query and return up to ``n_rows`` fake rows."""
+        from sqlalchemy.exc import SQLAlchemyError
+
         with self.eng.connect() as conn:
-            res = conn.execute(text(sql))
-            cols = list(res.keys())
-            rows = res.fetchmany(n_rows)
+            try:
+                res = conn.execute(text(sql))
+                cols = list(res.keys())
+                rows = res.fetchmany(n_rows)
+            except SQLAlchemyError as err:  # pragma: no cover - depends on DB
+                raise RuntimeError(f"SQL execution failed: {err}") from err
 
         data: List[Dict[str, Any]] = []
         for row in rows:
