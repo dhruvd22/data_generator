@@ -22,6 +22,16 @@ __all__ = ["AutonomousJob", "JobResult"]
 log = logging.getLogger(__name__)
 
 
+def _clean_sql(sql: str) -> str:
+    """Return SQL without newlines or backslashes."""
+    if not isinstance(sql, str):
+        return ""
+    sanitized = sql.replace("\n", " ").replace("\r", " ")
+    sanitized = sanitized.replace("\t", " ").replace("\\", "")
+    sanitized = " ".join(sanitized.split())
+    return sanitized.strip()
+
+
 @dataclass
 class JobResult:
     """Container for the final output of a single NL→SQL job."""
@@ -121,7 +131,8 @@ class AutonomousJob:
         ]
         sql = self.client.run_jobs([messages])[0]
         sql = sql.strip().strip("`")
-        return re.sub(r"(?i)^sql\s*", "", sql)
+        sql = re.sub(r"(?i)^sql\s*", "", sql)
+        return _clean_sql(sql)
 
     @log_call
     def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
@@ -215,7 +226,8 @@ class AutonomousJob:
                 data = json.loads(content or "{}")
             except Exception:
                 data = {"sql": content or "", "rows": []}
-            return JobResult(task["question"], data.get("sql", ""), data.get("rows", []))
+            sql = _clean_sql(data.get("sql", ""))
+            return JobResult(task["question"], sql, data.get("rows", []))
 
     @log_call
     def run_tasks(self, tasks: List[NLTask]) -> List[JobResult]:
