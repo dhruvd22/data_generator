@@ -114,6 +114,7 @@ class AutonomousJob:
     def _tool_generate_sql(self, nl_question: str) -> str:
         """LLM tool: generate SQL for ``nl_question``."""
         prompt = build_prompt(nl_question, self.schema, self.phase_cfg)
+        log.info("Generating SQL for question: %s", nl_question)
         messages = [
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": prompt},
@@ -125,18 +126,21 @@ class AutonomousJob:
     @log_call
     def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
         """LLM tool: validate SQL via :class:`SQLValidator`."""
+        log.info("Validating SQL: %s", sql)
         ok, err = self.validator.check(sql)
         return {"ok": ok, "error": err}
 
     @log_call
     def _tool_critic(self, sql: str) -> Dict[str, Any]:
         """LLM tool: run the critic."""
+        log.info("Running critic on SQL")
         result = self.critic.review("", sql, _schema_as_markdown(self.schema))
         return result
 
     @log_call
     def _tool_writer(self, sql: str, n_rows: int = 5) -> List[Dict[str, Any]]:
         """LLM tool: execute SQL and return fake rows."""
+        log.info("Fetching %d rows for SQL", n_rows)
         return self.writer.fetch(sql, n_rows)
 
     # ------------------------------------------------------------------
@@ -172,7 +176,9 @@ class AutonomousJob:
         ]
 
         while True:
-            msg = self.client.run_jobs([messages], tools=self._tools, return_message=True)[0]
+            msg = self.client.run_jobs(
+                [messages], tools=self._tools, return_message=True
+            )[0]
             tool_calls = getattr(msg, "tool_calls", None)
             if tool_calls:
                 messages.append(
@@ -181,7 +187,11 @@ class AutonomousJob:
                 for call in tool_calls:
                     fn = self._tool_map.get(call.function.name)
                     args = json.loads(call.function.arguments or "{}")
+                    log.info(
+                        "Invoking tool %s with args %s", call.function.name, args
+                    )
                     result = fn(**args)
+                    log.info("Tool %s returned %s", call.function.name, result)
                     messages.append(
                         {
                             "role": "tool",

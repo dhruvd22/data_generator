@@ -10,8 +10,8 @@ def test_load_tasks_happy(tmp_path):
     cfg = '''
 phases:
   - name: demo
-    count: 2
-    builtins: [COUNT]
+    builtins:
+      COUNT: 2
 '''
     path = tmp_path / "cfg.yaml"
     path.write_text(cfg)
@@ -59,4 +59,19 @@ phases:
     tasks = load_tasks(str(path), {"t": object()}, phase="second")
     assert len(tasks) == 2
     assert all(t["phase"] == "second" for t in tasks)
+
+
+def test_builtin_default_count(tmp_path):
+    cfg = """
+phases:
+  - name: demo
+    builtins: [MAX, AVG]
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t": object()})
+    # two functions * default 5 each
+    assert len(tasks) == 10
+    assert {t["metadata"]["builtins"][0] for t in tasks} == {"MAX", "AVG"}
 

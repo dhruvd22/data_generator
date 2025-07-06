@@ -1,7 +1,9 @@
 phases:
   - name: builtins
-    count: 20
-    builtins: [COUNT, MAX, AVG]
+    builtins:
+      COUNT: 5
+      MAX: 5
+      AVG: 5
     dataset_output_file_dir: generated_datasets/builtins
 
   - name: schema_doc
