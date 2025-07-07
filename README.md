@@ -51,6 +51,40 @@ print(result.sql, result.rows)
 
 All configuration lives in `config.yaml`.
 
+## Architecture overview
+
+The generator is composed of small modules that interact through
+`AutonomousJob`. Tasks are loaded from the configuration file and then flow
+through a series of tool calls until a validated query and optional sample data
+are produced.
+
+```
+config.yaml ──▶ InputLoader ──▶ AutonomousJob
+                      │
+                      ├─▶ SchemaLoader
+                      ├─▶ PromptBuilder
+                      ├─▶ ResponsesClient
+                      ├─▶ SQLValidator
+                      ├─▶ Critic
+                      └─▶ Writer
+```
+
+### Execution flow
+
+1. ``InputLoader`` reads ``config.yaml`` and expands each phase into one or more
+   NL tasks.
+2. ``SchemaLoader`` introspects the PostgreSQL database and provides table
+   metadata for prompts and validation.
+3. ``AutonomousJob`` processes each task using LLM tool-calling:
+   - ``PromptBuilder`` crafts the user/system messages or template based on the
+     phase settings.
+   - ``ResponsesClient`` queries OpenAI to generate SQL.
+   - ``SQLValidator`` runs ``EXPLAIN`` against the database and reports errors.
+   - ``Critic`` reviews the SQL and can return a fixed version.
+   - ``Writer`` executes the final SQL and returns anonymised rows.
+4. Each result is optionally appended to a JSONL dataset as specified in the
+   phase metadata.
+
 ## Running tests
 
 This project ships with a small test suite. After installing the runtime
