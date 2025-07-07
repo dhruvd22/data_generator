@@ -184,12 +184,15 @@ class AutonomousJob:
         from .schema_relationship import discover_relationships
 
         n_rows = int(task.get("metadata", {}).get("n_rows", 5))
-        parallelism = int(task.get("metadata", {}).get("parallelism", 1))
+        # ``discover_relationships`` currently accepts a ``sample_limit``
+        # argument for controlling how many rows to analyse.  The
+        # configuration uses ``n_rows`` for this value, so we map it through
+        # here.  Additional metadata such as ``parallelism`` may be supplied
+        # but is ignored as the helper does not implement it yet.
         pairs = await discover_relationships(
             self.schema,
             self.writer.eng,
-            n_rows=n_rows,
-            parallelism=parallelism,
+            sample_limit=n_rows,
         )
         return JobResult(task.get("question", ""), "", pairs)
 

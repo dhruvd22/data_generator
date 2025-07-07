@@ -38,15 +38,17 @@ async def _always_contained(*args, **kwargs):
 
 def test_fk_relationship(monkeypatch):
     inspector = DummyInspector(
-        {"a": [{"referred_table": "b", "constrained_columns": ["b_id"], "referred_columns": ["id"]}]}
+        {
+            "a": [
+                {"referred_table": "b", "constrained_columns": ["b_id"], "referred_columns": ["id"]}
+            ]
+        }
     )
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
     monkeypatch.setattr(
         "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
     )
-    monkeypatch.setattr(
-        "nl_sql_generator.schema_relationship._values_contained", _always_contained
-    )
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
 
     schema = {
         "a": TableInfo("a", [ColumnInfo("b_id", "int")], None),
@@ -60,18 +62,15 @@ def test_fk_relationship(monkeypatch):
 def test_heuristic_relationship(monkeypatch):
     inspector = DummyInspector()
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
+
     async def _sim(*args, **kwargs):
         return 0.9
 
     async def _val(*args, **kwargs):
         return True
 
-    monkeypatch.setattr(
-        "nl_sql_generator.schema_relationship._comment_similarity", _sim
-    )
-    monkeypatch.setattr(
-        "nl_sql_generator.schema_relationship._values_contained", _val
-    )
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._comment_similarity", _sim)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _val)
 
     schema = {
         "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None),
@@ -88,9 +87,7 @@ def test_reject_low_similarity(monkeypatch):
     monkeypatch.setattr(
         "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
     )
-    monkeypatch.setattr(
-        "nl_sql_generator.schema_relationship._values_contained", _always_contained
-    )
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
     schema = {
         "a": TableInfo("a", [ColumnInfo("foo", "int")], None),
         "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
