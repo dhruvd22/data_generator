@@ -17,6 +17,7 @@ import asyncio
 import os
 from dataclasses import dataclass
 from typing import Any, List
+import json
 
 from openai import AsyncOpenAI, OpenAI
 import logging
@@ -62,8 +63,34 @@ def _estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
 
 
 def _truncate_schema_lines(text: str) -> str:
-    """Return ``text`` with schema columns removed for logging purposes."""
-    if "schema:" not in text.lower():
+    """Return ``text`` with schema details removed for logging purposes."""
+    lower_text = text.lower()
+
+    # Handle ``SCHEMA_JSON:`` blocks by keeping only table names
+    if "schema_json:" in lower_text:
+        pre, _, rest = text.partition("SCHEMA_JSON:")
+        json_part = rest.lstrip()
+        # Schema JSON ends before the first blank line
+        json_str, sep, tail = json_part.partition("\n\n")
+        if not sep:
+            json_str, tail = json_part, ""
+        try:
+            obj = json.loads(json_str)
+            tables = obj.get("tables", {})
+            if isinstance(tables, dict):
+                table_names = list(tables.keys())
+            else:
+                table_names = tables
+            truncated = {"tables": table_names}
+            truncated_json = json.dumps(truncated, indent=2)
+        except Exception:
+            truncated_json = "{}"
+        text = f"{pre}SCHEMA_JSON:\n{truncated_json}"
+        if tail:
+            text += f"\n\n{tail}"
+        lower_text = text.lower()
+
+    if "schema:" not in lower_text:
         return text
 
     lines = text.splitlines()
