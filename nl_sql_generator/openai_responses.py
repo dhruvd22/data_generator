@@ -61,6 +61,33 @@ def _estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
     return input_tokens * in_rate + output_tokens * out_rate
 
 
+def _truncate_schema_lines(text: str) -> str:
+    """Return ``text`` with schema columns removed for logging purposes."""
+    if "schema:" not in text.lower():
+        return text
+
+    lines = text.splitlines()
+    out_lines = []
+    in_schema = False
+    for line in lines:
+        lower = line.strip().lower()
+        if lower.startswith("schema:"):
+            in_schema = True
+            out_lines.append(line.rstrip())
+            continue
+        if in_schema:
+            if line.startswith("-"):
+                out_lines.append(line.split(":", 1)[0])
+                continue
+            if line.strip() == "":
+                out_lines.append(line)
+                continue
+            # exit schema block on first non-table line
+            in_schema = False
+        out_lines.append(line)
+    return "\n".join(out_lines)
+
+
 class ResponsesClient:
     """Thin wrapper around the OpenAI Responses API.
 
@@ -174,7 +201,9 @@ class ResponsesClient:
         serializable = [m.model_dump() if hasattr(m, "model_dump") else m for m in messages]
 
         # Log the prompt without JSON escape sequences
-        lines = [f"{m.get('role')}: {m.get('content', '')}" for m in serializable]
+        lines = [
+            f"{m.get('role')}: {_truncate_schema_lines(m.get('content', ''))}" for m in serializable
+        ]
         log.info("Prompt:\n%s", "\n".join(lines))
         model = model or self.model
         for attempt in range(5):

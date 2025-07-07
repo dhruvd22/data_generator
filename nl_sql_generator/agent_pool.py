@@ -1,6 +1,7 @@
 import asyncio
 import math
 import itertools
+import logging
 from typing import Any, Dict, List
 
 from .worker_agent import WorkerAgent
@@ -23,8 +24,10 @@ class AgentPool:
         self.client = client
         self.seen: set[tuple[str, str]] = set()
         self.lock = asyncio.Lock()
+        self.log = logging.getLogger(__name__)
 
     async def _run_worker(self, batch_size: int, worker_id: int) -> int:
+        self.log.info("Worker %d starting batch size %d", worker_id, batch_size)
         agent = WorkerAgent(
             self.schema,
             self.cfg,
@@ -38,14 +41,22 @@ class AgentPool:
             for p in pairs:
                 self.seen.add((p["question"], p["answer"]))
             delta = len(self.seen) - before
+        self.log.info("Worker %d produced %d new pairs", worker_id, delta)
         return delta
 
     async def generate(self) -> List[Dict[str, str]]:
         goal = int(self.cfg.get("count", 1))
         k = math.ceil(goal / int(self.cfg.get("parallelism", 1)))
         attempts = 0
+        self.log.info(
+            "Starting generation: goal=%d parallelism=%d batch_size=%d",
+            goal,
+            int(self.cfg.get("parallelism", 1)),
+            k,
+        )
         while len(self.seen) < goal and attempts < self.cfg.get("max_attempts", 6):
             jobs = [self._run_worker(k, i) for i in range(int(self.cfg.get("parallelism", 1)))]
             await asyncio.gather(*jobs)
             attempts += 1
+            self.log.info("Attempt %d complete, total pairs=%d", attempts, len(self.seen))
         return [{"question": q, "answer": a} for q, a in itertools.islice(self.seen, goal)]
