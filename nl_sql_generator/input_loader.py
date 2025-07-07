@@ -76,6 +76,17 @@ def load_tasks(
                 meta_with_rows = {**meta, "n_rows": n_rows}
                 tasks.append({"phase": name, "question": q, "metadata": meta_with_rows})
             continue
+        if name.lower() == "schema_docs":
+            count = int(phase_def.get("count", 1))
+            q = str(
+                phase_def.get(
+                    "question",
+                    f"Generate {count} unique question-answer pairs about the schema.",
+                )
+            )
+            meta_with_count = {**meta, "count": count}
+            tasks.append({"phase": name, "question": q, "metadata": meta_with_count})
+            continue
         questions = phase_def.get("questions")
         if questions:
             for q in questions:

@@ -11,6 +11,12 @@ phases:
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_doc
 
+  - name: schema_docs
+    count: 5
+    prompt_template: schema_doc_template.txt
+    use_sample_rows: false
+    dataset_output_file_dir: generated_datasets/schema_docs
+
 
   - name: single_table
     count: 30

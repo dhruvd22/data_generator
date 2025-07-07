@@ -179,6 +179,45 @@ class AutonomousJob:
             docs = []
         return JobResult(task.get("question", ""), "", docs)
 
+    def _run_schema_docs(self, task: NLTask) -> JobResult:
+        """Generate NL⇄schema documentation pairs."""
+        count = int(task.get("metadata", {}).get("count", 1))
+        prompt_obj = build_prompt(task.get("question", ""), self.schema, self.phase_cfg)
+        if isinstance(prompt_obj, list):
+            messages = prompt_obj
+        else:
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt_obj},
+            ]
+        seen: set[tuple[str, str]] = set()
+        pairs: list[dict[str, str]] = []
+        attempts = 0
+        while len(pairs) < count and attempts < 5:
+            log.info("Generating %d schema QA pairs (attempt %d)", count - len(pairs), attempts + 1)
+            text = self.client.run_jobs([messages])[0]
+            for line in text.splitlines():
+                try:
+                    obj = json.loads(line)
+                except Exception:  # pragma: no cover - depends on LLM output
+                    continue
+                q = obj.get("question")
+                a = obj.get("answer")
+                if not q or not a:
+                    continue
+                key = (q, a)
+                if key in seen:
+                    continue
+                seen.add(key)
+                pairs.append({"question": q, "answer": a})
+                if len(pairs) >= count:
+                    break
+            if len(pairs) < count:
+                missing = count - len(pairs)
+                messages.append({"role": "user", "content": f"Regenerate {missing} more unique."})
+                attempts += 1
+        return JobResult(task.get("question", ""), "", pairs)
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -239,6 +278,8 @@ class AutonomousJob:
 
         if task.get("phase") == "schema_doc":
             return self._run_schema_doc(task)
+        if task.get("phase") == "schema_docs":
+            return self._run_schema_docs(task)
 
         messages = [
             {
@@ -324,7 +365,11 @@ class AutonomousJob:
                         doc = item.get("table_doc", "")
                         for q in item.get("sample_questions", []):
                             self.writer.append_jsonl({"question": q, "doc": doc}, path)
-                    log.info("Wrote schema docs to %s", path)
+                        log.info("Wrote schema docs to %s", path)
+                elif t.get("phase") == "schema_docs":
+                    for pair in res.rows:
+                        self.writer.append_jsonl(pair, path)
+                    log.info("Wrote schema QA pairs to %s", path)
                 else:
                     self.writer.append_jsonl(
                         {"question": res.question, "sql": res.sql},
