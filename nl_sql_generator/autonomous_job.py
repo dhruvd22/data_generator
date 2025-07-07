@@ -168,7 +168,13 @@ class AutonomousJob:
         from .agent_pool import AgentPool
         from .validator import NoOpValidator
 
-        pool = AgentPool(self.schema, task.get("metadata", {}), NoOpValidator, self.writer)
+        pool = AgentPool(
+            self.schema,
+            task.get("metadata", {}),
+            NoOpValidator,
+            self.writer,
+            self.client,
+        )
         pairs = await pool.generate()
         return JobResult(task.get("question", ""), "", pairs)
 

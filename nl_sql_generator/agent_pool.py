@@ -4,21 +4,34 @@ import itertools
 from typing import Any, Dict, List
 
 from .worker_agent import WorkerAgent
+from .openai_responses import ResponsesClient
 
 
 class AgentPool:
     def __init__(
-        self, schema: Dict[str, Any], phase_cfg: Dict[str, Any], validator_cls, writer
+        self,
+        schema: Dict[str, Any],
+        phase_cfg: Dict[str, Any],
+        validator_cls,
+        writer,
+        client: ResponsesClient,
     ) -> None:
         self.schema = schema
         self.cfg = phase_cfg
         self.validator_cls = validator_cls
         self.writer = writer
+        self.client = client
         self.seen: set[tuple[str, str]] = set()
         self.lock = asyncio.Lock()
 
     async def _run_worker(self, batch_size: int, worker_id: int) -> int:
-        agent = WorkerAgent(self.schema, self.cfg, self.validator_cls, worker_id)
+        agent = WorkerAgent(
+            self.schema,
+            self.cfg,
+            self.validator_cls,
+            worker_id,
+            self.client,
+        )
         pairs = await agent.generate(batch_size)
         async with self.lock:
             before = len(self.seen)

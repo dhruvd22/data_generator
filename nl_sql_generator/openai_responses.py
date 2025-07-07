@@ -211,7 +211,18 @@ class ResponsesClient:
                 est_cost = _estimate_cost(in_tok, out_tok, self.model)
 
                 if self.cost_spent + est_cost > self.budget_usd:
-                    raise RuntimeError("Budget exceeded")
+                    log.error(
+                        "Budget exceeded: cost=$%.4f spent=$%.4f budget=$%.4f",
+                        est_cost,
+                        self.cost_spent,
+                        self.budget_usd,
+                    )
+                    raise RuntimeError(
+                        (
+                            "Budget exceeded: spent=$%.4f + est=$%.4f > budget=$%.4f"
+                        )
+                        % (self.cost_spent, est_cost, self.budget_usd)
+                    )
 
                 async with self._lock:
                     self.tokens_in += in_tok
