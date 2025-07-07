@@ -33,7 +33,7 @@ phases:
 
   - name: schema_relationship
     count: 100
-    n_rows: 20
+    n_rows: 500
     prompt_template: schema_relationship_template.txt
     dataset_output_file_dir: generated_datasets/schema_relationship
 
