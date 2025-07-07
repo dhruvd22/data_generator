@@ -41,24 +41,6 @@ def test_dataset_only_question_sql(tmp_path, monkeypatch):
     assert writer.seen == [{"question": "foo?", "sql": "SELECT 1"}]
 
 
-def test_schema_doc_dataset(tmp_path):
-    writer = DummyWriter()
-    job = AutonomousJob(
-        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
-    )
-
-    job._run_schema_doc = lambda t: JobResult(
-        "", "", [{"table_doc": "doc", "sample_questions": ["Q1"]}]
-    )
-
-    t = {
-        "phase": "schema_doc",
-        "question": "",
-        "metadata": {"dataset_output_file_dir": str(tmp_path)},
-    }
-    job.run_tasks([t])
-    assert writer.seen == [{"question": "Q1", "doc": "doc"}]
-
 
 def test_schema_docs_dataset(tmp_path):
     writer = DummyWriter()

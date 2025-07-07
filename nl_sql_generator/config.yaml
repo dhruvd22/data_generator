@@ -5,12 +5,6 @@ phases:
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/builtins
 
-  - name: schema_doc
-    count: 5
-    prompt_template: 00_schema-doc_QA_prompt.txt
-    use_sample_rows: false
-    dataset_output_file_dir: generated_datasets/schema_doc
-
   - name: schema_docs
     count: 5
     prompt_template: schema_doc_template.txt
