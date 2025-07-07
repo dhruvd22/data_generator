@@ -10,7 +10,7 @@ Example:
     You are a PostgreSQL expert.
 """
 
-__all__ = ["build_prompt", "load_template_messages"]
+__all__ = ["build_prompt", "load_template_messages", "build_schema_doc_prompt"]
 
 from textwrap import dedent
 import random
@@ -69,6 +69,14 @@ def load_template_messages(
     if role is not None:
         messages.append({"role": role, "content": "\n".join(buf).strip()})
     return messages
+
+
+def build_schema_doc_prompt(schema: Dict[str, Any], k: int = 1) -> List[Dict[str, str]]:
+    """Return chat messages to generate ``k`` schema QA pairs."""
+
+    subset = SchemaLoader.to_json(schema, max_tables=8)
+    question = f"Generate {k} unique question-answer pairs about the schema."
+    return load_template_messages("schema_doc_template.txt", subset, question)
 
 
 def build_prompt(

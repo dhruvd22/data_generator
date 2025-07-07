@@ -56,6 +56,7 @@ def load_tasks(
         raise ValueError("Invalid YAML configuration") from exc
     if not isinstance(cfg, dict):
         raise ValueError("Invalid YAML configuration")
+    defaults = cfg.get("defaults", {})
 
     tasks: List[NLTask] = []
     table_names = list(schema.keys()) if schema else []
@@ -64,9 +65,12 @@ def load_tasks(
         if phase and name != phase:
             continue
         meta = {
-            k: v
-            for k, v in phase_def.items()
-            if k not in {"name", "questions", "count", "builtins"}
+            **defaults,
+            **{
+                k: v
+                for k, v in phase_def.items()
+                if k not in {"name", "questions", "count", "builtins"}
+            },
         }
 
         if name.lower() == "sample_data":

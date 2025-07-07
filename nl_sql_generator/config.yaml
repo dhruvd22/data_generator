@@ -1,3 +1,5 @@
+defaults:
+  parallelism: 4
 phases:
   - name: builtins
     count: 5
@@ -7,6 +9,8 @@ phases:
 
   - name: schema_docs
     count: 5
+    parallelism: 10
+    openai_model: gpt-4o-mini
     prompt_template: schema_doc_template.txt
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs

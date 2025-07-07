@@ -104,3 +104,11 @@ following before committing changes:
 black --line-length 100 .
 ruff check --fix .
 ```
+
+## Scaling & Parallelism
+
+You can control how many helper agents run concurrently via the `parallelism` setting.
+Set a global default under `defaults` in `config.yaml` or override per phase. The
+`DG_PARALLELISM` environment variable takes precedence. The dispatcher fans out
+async helper agents which merge their unique question–answer pairs before
+writing the dataset.

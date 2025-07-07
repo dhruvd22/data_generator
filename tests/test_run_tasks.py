@@ -31,7 +31,11 @@ def test_dataset_only_question_sql(tmp_path, monkeypatch):
     job = AutonomousJob(
         {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
     )
-    job.run_task = lambda t: JobResult(t["question"], "SELECT 1", [])
+
+    async def _rt(t):
+        return JobResult(t["question"], "SELECT 1", [])
+
+    job.run_task = _rt
     t = {
         "phase": "demo",
         "question": "foo?",
@@ -41,14 +45,16 @@ def test_dataset_only_question_sql(tmp_path, monkeypatch):
     assert writer.seen == [{"question": "foo?", "sql": "SELECT 1"}]
 
 
-
 def test_schema_docs_dataset(tmp_path):
     writer = DummyWriter()
     job = AutonomousJob(
         {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
     )
 
-    job._run_schema_docs = lambda t: JobResult("", "", [{"question": "Q?", "answer": "A"}])
+    async def _sd(t):
+        return JobResult("", "", [{"question": "Q?", "answer": "A"}])
+
+    job._run_schema_docs_async = _sd
 
     t = {
         "phase": "schema_docs",

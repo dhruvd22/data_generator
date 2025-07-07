@@ -18,6 +18,7 @@ import json
 import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List
+import asyncio
 import os
 
 from .input_loader import NLTask
@@ -161,44 +162,14 @@ class AutonomousJob:
             },
         ]
 
+    async def _run_schema_docs_async(self, task: NLTask) -> JobResult:
+        """Generate NL⇄schema documentation pairs using worker agents."""
 
-    def _run_schema_docs(self, task: NLTask) -> JobResult:
-        """Generate NL⇄schema documentation pairs."""
-        count = int(task.get("metadata", {}).get("count", 1))
-        prompt_obj = build_prompt(task.get("question", ""), self.schema, self.phase_cfg)
-        if isinstance(prompt_obj, list):
-            messages = prompt_obj
-        else:
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt_obj},
-            ]
-        seen: set[tuple[str, str]] = set()
-        pairs: list[dict[str, str]] = []
-        attempts = 0
-        while len(pairs) < count and attempts < 5:
-            log.info("Generating %d schema QA pairs (attempt %d)", count - len(pairs), attempts + 1)
-            text = self.client.run_jobs([messages])[0]
-            for line in text.splitlines():
-                try:
-                    obj = json.loads(line)
-                except Exception:  # pragma: no cover - depends on LLM output
-                    continue
-                q = obj.get("question")
-                a = obj.get("answer")
-                if not q or not a:
-                    continue
-                key = (q, a)
-                if key in seen:
-                    continue
-                seen.add(key)
-                pairs.append({"question": q, "answer": a})
-                if len(pairs) >= count:
-                    break
-            if len(pairs) < count:
-                missing = count - len(pairs)
-                messages.append({"role": "user", "content": f"Regenerate {missing} more unique."})
-                attempts += 1
+        from .agent_pool import AgentPool
+        from .validator import NoOpValidator
+
+        pool = AgentPool(self.schema, task.get("metadata", {}), NoOpValidator, self.writer)
+        pairs = await pool.generate()
         return JobResult(task.get("question", ""), "", pairs)
 
     # ------------------------------------------------------------------
@@ -247,7 +218,7 @@ class AutonomousJob:
     # main entrypoints
     # ------------------------------------------------------------------
     @log_call
-    def run_task(self, task: NLTask) -> JobResult:
+    async def run_task(self, task: NLTask) -> JobResult:
         """Process ``task`` letting the LLM drive via tools.
 
         Args:
@@ -260,7 +231,7 @@ class AutonomousJob:
         self.phase_cfg = task.get("metadata", {})
 
         if task.get("phase") == "schema_docs":
-            return self._run_schema_docs(task)
+            return await self._run_schema_docs_async(task)
 
         messages = [
             {
@@ -335,7 +306,7 @@ class AutonomousJob:
         total = len(tasks)
         for idx, t in enumerate(tasks, 1):
             log.info("Running task %d/%d: %s", idx, total, t.get("question"))
-            res = self.run_task(t)
+            res = asyncio.run(self.run_task(t))
             results.append(res)
 
             out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
