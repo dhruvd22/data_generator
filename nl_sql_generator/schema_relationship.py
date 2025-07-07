@@ -64,12 +64,12 @@ async def _comment_similarity(c1: str | None, c2: str | None) -> float:
     return float(np.dot(emb1, emb2) / denom)
 
 
-async def _values_contained(
+async def _value_overlap(
     engine, t_from: str, c_from: str, t_to: str, c_to: str, limit: int
-) -> bool:
-    """Return ``True`` if sampled values from ``t_from.c_from`` mostly appear in ``t_to.c_to``."""
+) -> float:
+    """Return the ratio of values from ``t_from.c_from`` found in ``t_to.c_to``."""
 
-    def _run() -> bool:
+    def _run() -> float:
         with engine.connect() as conn:
             q1 = text(
                 f"SELECT DISTINCT {c_from} FROM {t_from} "
@@ -77,19 +77,28 @@ async def _values_contained(
             )
             vals_a = {row[0] for row in conn.execute(q1)}
             if not vals_a:
-                return False
+                return 0.0
             q2 = text(f"SELECT DISTINCT {c_to} FROM {t_to} WHERE {c_to} IS NOT NULL")
             vals_b = {row[0] for row in conn.execute(q2)}
         if not vals_a:
-            return False
+            return 0.0
         matched = len([v for v in vals_a if v in vals_b])
-        return matched / len(vals_a) >= 0.95
+        return matched / len(vals_a)
 
     try:
         return await asyncio.to_thread(_run)
     except Exception as err:  # pragma: no cover - DB errors
-        log.warning("Value check failed: %s", err)
-        return False
+        log.warning("Value overlap check failed: %s", err)
+        return 0.0
+
+
+async def _values_contained(
+    engine, t_from: str, c_from: str, t_to: str, c_to: str, limit: int
+) -> bool:
+    """Return ``True`` if sampled values from ``t_from.c_from`` mostly appear in ``t_to.c_to``."""
+
+    ratio = await _value_overlap(engine, t_from, c_from, t_to, c_to, limit)
+    return ratio >= 0.95
 
 
 # ----------------------------------------------------------------------
@@ -101,12 +110,14 @@ async def discover_relationships(
     schema: Dict[str, TableInfo], engine, sample_limit: int = 5000
 ) -> List[Dict[str, Any]]:
     """Return discovered relationships sorted by confidence."""
+    log.info("Starting relationship discovery with sample_limit=%d", sample_limit)
 
     insp = inspect(engine)
     results: List[Dict[str, Any]] = []
     seen: set[str] = set()
 
     # ----------------------- step 1: explicit FKs ---------------------
+    log.info("Checking explicit foreign keys")
     for table in schema:
         for fk in insp.get_foreign_keys(table):
             rt = fk.get("referred_table")
@@ -119,6 +130,7 @@ async def discover_relationships(
                 if rel in seen:
                     continue
                 seen.add(rel)
+                log.debug("Found FK %s", rel)
                 results.append(
                     {
                         "question": f"How is {table}.{lc} related to {rt}.{rc}?",
@@ -138,6 +150,7 @@ async def discover_relationships(
             if idx.get("unique"):
                 uniq.extend(idx.get("column_names", []))
         pk_unique[tbl] = set(pkc + uniq)
+    log.debug("PK/unique columns: %s", pk_unique)
 
     # mapping of column info
     type_map: Dict[tuple[str, str], str] = {}
@@ -148,7 +161,7 @@ async def discover_relationships(
             type_map[key] = col.type_
             comment_map[key] = col.comment
 
-    # --------------------- steps 2-4 heuristics -----------------------
+    log.info("Discovering relationships using heuristics")
     for ftbl, finfo in schema.items():
         for fcol in finfo.columns:
             ftype = type_map[(ftbl, fcol.name)]
@@ -171,13 +184,29 @@ async def discover_relationships(
                     if sim < 0.8:
                         continue
                     conf = 0.75
+                    if fcol.name.lower() in {f"{rtbl}_id", f"{rtbl.rstrip('s')}_id"}:
+                        conf += 0.05
                     com_sim = await _comment_similarity(fcomment, rcomment)
                     if com_sim >= 0.83:
                         conf += 0.1
-                    if await _values_contained(
+                    overlap = await _value_overlap(
                         engine, ftbl, fcol.name, rtbl, rcol.name, sample_limit
-                    ):
+                    )
+                    if overlap >= 0.95:
                         conf += 0.1
+                    elif overlap >= 0.7:
+                        conf += 0.05
+                    log.debug(
+                        "%s.%s vs %s.%s -> name_sim=%.2f, comment_sim=%.2f, overlap=%.2f, conf=%.2f",
+                        ftbl,
+                        fcol.name,
+                        rtbl,
+                        rcol.name,
+                        sim,
+                        com_sim,
+                        overlap,
+                        conf,
+                    )
                     if conf >= 0.75:
                         rel = f"{ftbl}.{fcol.name} -> {rtbl}.{rcol.name}"
                         if rel in seen:
@@ -192,4 +221,5 @@ async def discover_relationships(
                         )
 
     results.sort(key=lambda r: r["confidence"], reverse=True)
+    log.info("Discovered %d relationships", len(results))
     return results
