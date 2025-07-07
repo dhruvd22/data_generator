@@ -95,22 +95,14 @@ def load_tasks(
             continue
 
         if isinstance(builtins_spec, list):
-            if count:
-                for i in range(count):
-                    builtin = random.choice(builtins_spec)
+            per_fn = count or 5
+            for fn in builtins_spec:
+                for i in range(per_fn):
                     table = random.choice(table_names) if table_names else f"table_{i + 1}"
-                    q = f"Write a query using {builtin} on {table}"
-                    meta_with_fn = {**meta, "builtins": [builtin]}
+                    q = f"Write a query using {fn} on {table}"
+                    meta_with_fn = {**meta, "builtins": [fn]}
                     tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
-                continue
-            else:
-                for fn in builtins_spec:
-                    for i in range(5):
-                        table = random.choice(table_names) if table_names else f"table_{i + 1}"
-                        q = f"Write a query using {fn} on {table}"
-                        meta_with_fn = {**meta, "builtins": [fn]}
-                        tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
-                continue
+            continue
 
         builtins = meta.get("builtins", [])
         for i in range(count):

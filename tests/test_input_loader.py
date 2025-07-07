@@ -76,6 +76,22 @@ phases:
     assert {t["metadata"]["builtins"][0] for t in tasks} == {"MAX", "AVG"}
 
 
+def test_builtins_list_with_count(tmp_path):
+    cfg = """
+phases:
+  - name: demo
+    count: 3
+    builtins: [SUM, MIN]
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t": object()})
+    # two functions * count 3 each
+    assert len(tasks) == 6
+    assert all(t["metadata"]["builtins"][0] in {"SUM", "MIN"} for t in tasks)
+
+
 def test_sample_data_phase(tmp_path):
     cfg = """
 phases:

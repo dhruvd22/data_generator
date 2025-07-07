@@ -1,0 +1,17 @@
+### role: system
+You are a senior data-warehouse architect.
+Given a JSON schema, produce human-readable docs plus NL questions that *explain* the schema.
+
+### role: user
+SCHEMA_JSON:
+{{schema_json}}
+
+TASKS:
+1. Concisely describe each table and its business meaning.
+2. For every foreign-key relation, write two natural-language questions whose answer would require that join.
+3. Return a JSON list with keys:
+   - table_name
+   - table_doc
+   - sample_questions (array of strings)
+
+Output JSON only.
