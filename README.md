@@ -101,6 +101,15 @@ config.yaml ──▶ InputLoader ──▶ AutonomousJob
 - `logger` – sets up rich console and file logging
 - `main` – CLI entrypoint
 
+## Schema relationship phase
+
+This phase automatically discovers how tables relate to each other. It pulls
+sample rows from every table, analyses column pairs for overlap and correlation
+and then prompts the LLM using the `schema_relationship_template.txt` prompt.
+The generated question/relationship pairs are written to
+`generated_datasets/schema_relationship/dataset.jsonl` and can be invoked via
+`--phase schema_relationship` when running the CLI.
+
 ## Running tests
 
 This project ships with a small test suite. After installing the runtime
