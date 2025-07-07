@@ -17,6 +17,7 @@ import random
 from typing import Dict, List, Any
 import json
 import os
+from .schema_loader import SchemaLoader, TableInfo
 
 
 def _schema_as_markdown(schema: Dict[str, Any]) -> str:
@@ -40,6 +41,12 @@ def load_template_messages(
     path = os.path.join(os.path.dirname(__file__), "prompt_template", template_name)
     with open(path, "r", encoding="utf-8") as fh:
         text = fh.read()
+
+    # ``schema`` may use :class:`TableInfo` dataclasses. Convert to plain
+    # dictionaries so ``json.dumps`` succeeds when rendering the template.
+    example_val = next(iter(schema.values()), None)
+    if isinstance(example_val, TableInfo):
+        schema = SchemaLoader.to_json(schema)
 
     replacements = {
         "schema_json": json.dumps(schema, indent=2),
