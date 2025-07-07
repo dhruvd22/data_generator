@@ -59,7 +59,6 @@ def build_prompt(
         f"""
         You are a PostgreSQL expert. Given the database schema and a question,
         output **only** the SQL query (no explanation) using valid PostgreSQL syntax.
-        All column names are quoted using double quotes while table names are not; ensure your SQL follows this convention.
         {fn_clause}
 
         Schema:
