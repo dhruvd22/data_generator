@@ -72,25 +72,48 @@ def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
     return score
 
 
+def _compatible_types(series_a: pd.Series, series_b: pd.Series) -> bool:
+    """Return ``True`` if series have comparable data types."""
+    if ptypes.is_numeric_dtype(series_a) and ptypes.is_numeric_dtype(series_b):
+        return True
+    if ptypes.is_bool_dtype(series_a) and ptypes.is_bool_dtype(series_b):
+        return True
+    if ptypes.is_datetime64_any_dtype(series_a) and ptypes.is_datetime64_any_dtype(series_b):
+        return True
+    if ptypes.is_string_dtype(series_a) and ptypes.is_string_dtype(series_b):
+        return True
+    return False
+
+
 def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> List[Dict[str, str]]:
     """Return relationship records for ``t1`` and ``t2``."""
     log.info("Analyzing table pair %s <-> %s", t1, t2)
     relations: List[Dict[str, str]] = []
     for c1 in df1.columns:
         for c2 in df2.columns:
-            score = _score_relation(df1[c1], df2[c2])
-            # also consider overlapping values for categorical columns
-            overlap = len(set(df1[c1].dropna()) & set(df2[c2].dropna()))
+            s1 = df1[c1]
+            s2 = df2[c2]
+            if not _compatible_types(s1, s2):
+                continue
+            score = _score_relation(s1, s2)
+            vals1 = set(s1.dropna())
+            vals2 = set(s2.dropna())
+            overlap = vals1 & vals2
+            ov_count = len(overlap)
+            ratio1 = ov_count / len(vals1) if vals1 else 0.0
+            ratio2 = ov_count / len(vals2) if vals2 else 0.0
             log.debug(
-                "Pair %s.%s vs %s.%s score=%.4f overlap=%d",
+                "Pair %s.%s vs %s.%s score=%.4f overlap=%d ratio1=%.2f ratio2=%.2f",
                 t1,
                 c1,
                 t2,
                 c2,
                 score,
-                overlap,
+                ov_count,
+                ratio1,
+                ratio2,
             )
-            if score > 0.8 or overlap > 0:
+            if ov_count >= 2 and (score >= 0.9 or (ratio1 >= 0.5 and ratio2 >= 0.5)):
                 relations.append(
                     {
                         "question": f"How is {t1}.{c1} related to {t2}.{c2}?",

@@ -12,6 +12,20 @@ def test_analyze_pair_overlap():
     assert {r["relationship"] for r in rels} == {"a.id -> b.id"}
 
 
+def test_analyze_pair_low_overlap():
+    df1 = pd.DataFrame({"id": [1, 2, 3]})
+    df2 = pd.DataFrame({"id": [3, 4, 5]})
+    rels = _analyze_pair("a", df1, "b", df2)
+    assert rels == []
+
+
+def test_analyze_pair_type_mismatch():
+    df1 = pd.DataFrame({"id": [1, 2, 3]})
+    df2 = pd.DataFrame({"val": ["1", "2", "3"]})
+    rels = _analyze_pair("a", df1, "b", df2)
+    assert rels == []
+
+
 class DummyEngine:
     pass
 
