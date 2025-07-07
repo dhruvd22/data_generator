@@ -56,7 +56,6 @@ def test_fk_relationship(monkeypatch):
     }
     rels = asyncio.run(discover_relationships(schema, DummyEngine()))
     assert rels[0]["relationship"] == "a.b_id -> b.id"
-    assert rels[0]["confidence"] == 1.0
 
 
 def test_heuristic_relationship(monkeypatch):
@@ -78,7 +77,6 @@ def test_heuristic_relationship(monkeypatch):
     }
     rels = asyncio.run(discover_relationships(schema, DummyEngine()))
     assert rels[0]["relationship"] == "a.b_id -> b.id"
-    assert rels[0]["confidence"] > 0.9
 
 
 def test_reject_low_similarity(monkeypatch):

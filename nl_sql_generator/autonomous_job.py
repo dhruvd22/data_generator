@@ -349,6 +349,8 @@ class AutonomousJob:
                     cleared.add(path)
                 if t.get("phase") in {"schema_docs", "schema_relationship"}:
                     for pair in res.rows:
+                        if t.get("phase") == "schema_relationship" and "confidence" in pair:
+                            pair = {k: v for k, v in pair.items() if k != "confidence"}
                         self.writer.append_jsonl(pair, path)
                     log.info("Wrote schema QA pairs to %s", path)
                 else:
