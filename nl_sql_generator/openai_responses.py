@@ -93,6 +93,7 @@ class ResponsesClient:
         self._sync_client = OpenAI(api_key=api_key)
         self._max_parallel = int(os.getenv("OPENAI_MAX_PARALLEL", "5"))
         self._sem = asyncio.Semaphore(self._max_parallel)
+        self._lock = asyncio.Lock()
 
     def run_jobs(
         self,
@@ -121,6 +122,16 @@ class ResponsesClient:
             return await asyncio.gather(*tasks)
 
         return asyncio.run(runner())
+
+    async def acomplete(
+        self,
+        messages: List[dict],
+        stream: bool = False,
+        tools: List[dict] | None = None,
+        return_message: bool = False,
+    ) -> Any:
+        async with self._sem:
+            return await self._request_with_retry(messages, stream, tools, return_message)
 
     async def _worker(
         self,
@@ -202,10 +213,11 @@ class ResponsesClient:
                 if self.cost_spent + est_cost > self.budget_usd:
                     raise RuntimeError("Budget exceeded")
 
-                self.tokens_in += in_tok
-                self.tokens_out += out_tok
-                self.cost_spent += est_cost
-                self.usage.add(in_tok, out_tok, est_cost)
+                async with self._lock:
+                    self.tokens_in += in_tok
+                    self.tokens_out += out_tok
+                    self.cost_spent += est_cost
+                    self.usage.add(in_tok, out_tok, est_cost)
                 log.info(
                     "OpenAI response: in=%d out=%d cost=$%.4f budget_left=$%.4f",
                     in_tok,
@@ -237,4 +249,18 @@ class ResponsesClient:
         """
 
         return self.budget_usd - self.cost_spent
-        return self.budget_usd - self.cost_spent
+
+
+_default_client: ResponsesClient | None = None
+
+
+async def acomplete(prompt: list[dict] | str, model: str | None = None) -> str:
+    """Convenience wrapper using a global :class:`ResponsesClient`."""
+
+    global _default_client
+    model = model or "gpt-4o-mini-resp"
+    if _default_client is None or _default_client.model != model:
+        budget = float(os.getenv("OPENAI_BUDGET_USD", "0"))
+        _default_client = ResponsesClient(model=model, budget_usd=budget)
+    messages = prompt if isinstance(prompt, list) else [{"role": "user", "content": prompt}]
+    return await _default_client.acomplete(messages)

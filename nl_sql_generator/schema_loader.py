@@ -94,10 +94,22 @@ class SchemaLoader:
         return schema
 
     @staticmethod
-    def to_json(schema: Dict[str, TableInfo]) -> dict:
-        """Convert ``schema`` to a JSON-serialisable dict."""
+    def to_json(schema: Dict[str, TableInfo], max_tables: int | None = None) -> dict:
+        """Convert ``schema`` to a JSON-serialisable dict.
+
+        Args:
+            schema: Mapping of table names to :class:`TableInfo`.
+            max_tables: Optional limit on the number of tables to include.
+        """
+
+        items = list(schema.items())
+        if max_tables is not None:
+            import random
+
+            items = random.sample(items, k=min(max_tables, len(items)))
+
         tables: Dict[str, dict] = {}
-        for name, info in schema.items():
+        for name, info in items:
             cols = {c.name: {"type": c.type_, "comment": c.comment} for c in info.columns}
             tables[name] = {
                 "columns": cols,
