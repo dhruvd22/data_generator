@@ -129,9 +129,10 @@ class ResponsesClient:
         stream: bool = False,
         tools: List[dict] | None = None,
         return_message: bool = False,
+        model: str | None = None,
     ) -> Any:
         async with self._sem:
-            return await self._request_with_retry(messages, stream, tools, return_message)
+            return await self._request_with_retry(messages, stream, tools, return_message, model)
 
     async def _worker(
         self,
@@ -139,6 +140,7 @@ class ResponsesClient:
         stream: bool,
         tools: List[dict] | None,
         return_message: bool,
+        model: str | None = None,
     ) -> Any:
         """Execute a single request with concurrency control.
 
@@ -152,7 +154,7 @@ class ResponsesClient:
             Response text or message.
         """
         async with self._sem:
-            return await self._request_with_retry(messages, stream, tools, return_message)
+            return await self._request_with_retry(messages, stream, tools, return_message, model)
 
     async def _request_with_retry(
         self,
@@ -160,6 +162,7 @@ class ResponsesClient:
         stream: bool,
         tools: List[dict] | None,
         return_message: bool,
+        model: str | None = None,
     ) -> Any:
         """Call the API with exponential backoff retry logic.
 
@@ -173,12 +176,13 @@ class ResponsesClient:
         # Log the prompt without JSON escape sequences
         lines = [f"{m.get('role')}: {m.get('content', '')}" for m in serializable]
         log.info("Prompt:\n%s", "\n".join(lines))
+        model = model or self.model
         for attempt in range(5):
-            log.info("OpenAI call attempt %d using model %s", attempt + 1, self.model)
+            log.info("OpenAI call attempt %d using model %s", attempt + 1, model)
             try:
                 if stream:
                     response = await self._client.chat.completions.create(
-                        model=self.model,
+                        model=model,
                         messages=messages,
                         tools=tools,
                         tool_choice="auto" if tools else None,
@@ -190,7 +194,7 @@ class ResponsesClient:
                     usage = response.usage
                 else:
                     response = await self._client.chat.completions.create(
-                        model=self.model,
+                        model=model,
                         messages=messages,
                         tools=tools,
                         tool_choice="auto" if tools else None,
@@ -208,7 +212,7 @@ class ResponsesClient:
                     )
                     or 0
                 )
-                est_cost = _estimate_cost(in_tok, out_tok, self.model)
+                est_cost = _estimate_cost(in_tok, out_tok, model)
 
                 if self.cost_spent + est_cost > self.budget_usd:
                     log.error(
@@ -218,9 +222,7 @@ class ResponsesClient:
                         self.budget_usd,
                     )
                     raise RuntimeError(
-                        (
-                            "Budget exceeded: spent=$%.4f + est=$%.4f > budget=$%.4f"
-                        )
+                        ("Budget exceeded: spent=$%.4f + est=$%.4f > budget=$%.4f")
                         % (self.cost_spent, est_cost, self.budget_usd)
                     )
 

@@ -22,8 +22,6 @@ class WorkerAgent:
 
     async def generate(self, k: int) -> List[Dict[str, str]]:
         prompt = build_schema_doc_prompt(self.schema, k=k)
-        completion = await self.client.acomplete(
-            prompt, model=self.cfg.get("openai_model")
-        )
+        completion = await self.client.acomplete(prompt, model=self.cfg.get("openai_model"))
         pairs = [json.loads(line) for line in completion.strip().splitlines() if line.strip()]
         return pairs
