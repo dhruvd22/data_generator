@@ -26,10 +26,17 @@ class AgentPool:
         self.lock = asyncio.Lock()
         self.log = logging.getLogger(__name__)
 
-    async def _run_worker(self, batch_size: int, worker_id: int) -> int:
+    def _schema_chunks(self) -> List[Dict[str, Any]]:
+        """Return per-worker schema slices."""
+        n = int(self.cfg.get("parallelism", 1))
+        table_names = list(self.schema.keys())
+        chunks = [table_names[i::n] for i in range(n)]
+        return [{t: self.schema[t] for t in c} for c in chunks]
+
+    async def _run_worker(self, batch_size: int, worker_id: int, schema: Dict[str, Any]) -> int:
         self.log.info("Worker %d starting batch size %d", worker_id, batch_size)
         agent = WorkerAgent(
-            self.schema,
+            schema,
             self.cfg,
             self.validator_cls,
             worker_id,
@@ -46,16 +53,18 @@ class AgentPool:
 
     async def generate(self) -> List[Dict[str, str]]:
         goal = int(self.cfg.get("count", 1))
-        k = math.ceil(goal / int(self.cfg.get("parallelism", 1)))
+        n_workers = int(self.cfg.get("parallelism", 1))
+        k = math.ceil(goal / n_workers)
+        schema_chunks = self._schema_chunks()
         attempts = 0
         self.log.info(
             "Starting generation: goal=%d parallelism=%d batch_size=%d",
             goal,
-            int(self.cfg.get("parallelism", 1)),
+            n_workers,
             k,
         )
         while len(self.seen) < goal and attempts < self.cfg.get("max_attempts", 6):
-            jobs = [self._run_worker(k, i) for i in range(int(self.cfg.get("parallelism", 1)))]
+            jobs = [self._run_worker(k, i, schema_chunks[i]) for i in range(n_workers)]
             await asyncio.gather(*jobs)
             attempts += 1
             self.log.info("Attempt %d complete, total pairs=%d", attempts, len(self.seen))
