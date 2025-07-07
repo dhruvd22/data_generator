@@ -24,9 +24,9 @@ export DATABASE_URL="postgresql://user:pass@host:5432/db"
 export OPENAI_API_KEY="sk-..."
 
 # generate via CLI (tasks come from config.yaml)
-python -m nl_sql_generator.main gen --config config.yaml
+python -m nl_sql_generator.main gen --config config.yaml --run-version v1
 # run a single phase only
-# python -m nl_sql_generator.main gen --config config.yaml --phase joins
+# python -m nl_sql_generator.main gen --config config.yaml --phase joins --run-version v1
 # no separate questions file is needed
 
 # or from Python
@@ -107,7 +107,8 @@ This phase automatically discovers how tables relate to each other. It pulls
 sample rows from every table, analyses column pairs for overlap and correlation
 and then prompts the LLM using the `schema_relationship_template.txt` prompt.
 The generated question/relationship pairs are written to
-`generated_datasets/schema_relationship/dataset.jsonl` and can be invoked via
+`generated_datasets/schema_relationship/dataset_<run_version>.jsonl` (or
+`dataset.jsonl` if no version is provided) and can be invoked via
 `--phase schema_relationship` when running the CLI.
 
 ## Running tests

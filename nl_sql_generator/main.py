@@ -77,6 +77,7 @@ def cli() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--config", default="config.yaml")
     p.add_argument("--phase", default=None)
+    p.add_argument("--run-version", default=None)
     args = p.parse_args()
 
     if not args.config.lower().endswith((".yaml", ".yml")):
@@ -94,7 +95,7 @@ def cli() -> None:
         writer=ResultWriter(),
     )
     tasks = load_tasks(args.config, schema, phase=args.phase)
-    for res in job.run_tasks(tasks):
+    for res in job.run_tasks(tasks, run_version=args.run_version):
         log.info(json.dumps({"question": res.question, "sql": res.sql}))
 
 
@@ -103,6 +104,7 @@ def gen(
     config: str = "config.yaml",
     stream: bool = False,
     phase: str | None = None,
+    run_version: str | None = None,
 ) -> None:
     """Generate SQL and result rows for tasks defined in ``config``.
 
@@ -110,6 +112,7 @@ def gen(
         config: Path to configuration YAML.
         stream: Unused placeholder for streaming.
         phase: Optional phase name to filter tasks.
+        run_version: String appended to dataset file names.
     """
 
     if not config.lower().endswith((".yaml", ".yml")):
@@ -128,7 +131,7 @@ def gen(
     )
 
     tasks = load_tasks(config, schema, phase=phase)
-    results = job.run_tasks(tasks)
+    results = job.run_tasks(tasks, run_version=run_version)
     for r in results:
         typer.echo(json.dumps({"question": r.question, "sql": r.sql, "rows": r.rows}))
 

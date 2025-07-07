@@ -24,6 +24,11 @@ class DummyWriter:
 
     def append_jsonl(self, row, path):
         self.seen.append(row)
+        with open(path, "a", encoding="utf-8") as fh:
+            import json
+
+            fh.write(json.dumps(row))
+            fh.write("\n")
 
 
 def test_dataset_only_question_sql(tmp_path, monkeypatch):
@@ -63,3 +68,26 @@ def test_schema_docs_dataset(tmp_path):
     }
     job.run_tasks([t])
     assert writer.seen == [{"question": "Q?", "answer": "A"}]
+
+
+def test_run_version_overwrites(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult(t["question"], "SELECT 1", [])
+
+    job.run_task = _rt
+    t = {
+        "phase": "demo",
+        "question": "foo?",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+
+    p = tmp_path / "dataset_v1.jsonl"
+    p.write_text("old\n")
+    job.run_tasks([t, t], run_version="v1")
+    content = p.read_text().strip().splitlines()
+    assert len(content) == 2
