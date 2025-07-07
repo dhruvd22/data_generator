@@ -43,6 +43,10 @@ def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
     df["a"] = _to_numeric(df["a"])
     df["b"] = _to_numeric(df["b"])
 
+    # avoid runtime warnings when series are constant
+    if df["a"].nunique() < 2 or df["b"].nunique() < 2:
+        return 0.0
+
     if Model is not None:
         try:  # pragma: no cover - best effort sempy usage
             m = Model("b ~ a")
