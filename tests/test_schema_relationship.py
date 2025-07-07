@@ -1,61 +1,99 @@
 import asyncio
-import pandas as pd
-import pytest
-from nl_sql_generator.schema_relationship import _analyze_pair, discover_relationships
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from nl_sql_generator.schema_relationship import discover_relationships
 from nl_sql_generator.schema_loader import TableInfo, ColumnInfo
 
 
-def test_analyze_pair_overlap():
-    df1 = pd.DataFrame({"id": [1, 2, 3]})
-    df2 = pd.DataFrame({"id": [2, 3, 4]})
-    rels = _analyze_pair("a", df1, "b", df2, pk1="id", pk2="id")
-    assert {r["relationship"] for r in rels} == {"a.id -> b.id"}
+class DummyInspector:
+    def __init__(self, fks=None):
+        self._fks = fks or {}
 
+    def get_foreign_keys(self, table):
+        return self._fks.get(table, [])
 
-def test_analyze_pair_low_overlap():
-    df1 = pd.DataFrame({"id": [1, 2, 3]})
-    df2 = pd.DataFrame({"id": [3, 4, 5]})
-    rels = _analyze_pair("a", df1, "b", df2, pk1="id", pk2="id")
-    assert rels == []
+    def get_pk_constraint(self, table):
+        return {"constrained_columns": ["id"]}
 
+    def get_unique_constraints(self, table):
+        return []
 
-def test_analyze_pair_type_mismatch():
-    df1 = pd.DataFrame({"id": [1, 2, 3]})
-    df2 = pd.DataFrame({"val": ["1", "2", "3"]})
-    rels = _analyze_pair("a", df1, "b", df2, pk1="id", pk2=None)
-    assert rels == []
-
-
-def test_analyze_pair_pk_match():
-    df1 = pd.DataFrame({"id": [1, 2, 3]})
-    df2 = pd.DataFrame({"a_id": [1, 2, 4]})
-    rels = _analyze_pair("a", df1, "b", df2, pk1="id", pk2=None)
-    assert {r["relationship"] for r in rels} == {"a.id -> b.a_id"}
+    def get_indexes(self, table):
+        return []
 
 
 class DummyEngine:
     pass
 
 
-def test_discover_relationships(monkeypatch):
-    async def fake_fetch(engine, table, n_rows):
-        if table == "t1":
-            return pd.DataFrame({"id": [1, 2, 3]})
-        return pd.DataFrame({"id": [1, 3, 5]})
+async def _noop_comment_similarity(*args, **kwargs):
+    return 0.0
 
-    monkeypatch.setattr("nl_sql_generator.schema_relationship._fetch_rows", fake_fetch)
+
+async def _always_contained(*args, **kwargs):
+    return True
+
+
+def test_fk_relationship(monkeypatch):
+    inspector = DummyInspector(
+        {"a": [{"referred_table": "b", "constrained_columns": ["b_id"], "referred_columns": ["id"]}]}
+    )
+    monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
+    )
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._values_contained", _always_contained
+    )
+
     schema = {
-        "t1": TableInfo("t1", [ColumnInfo("id", "int")], "id"),
-        "t2": TableInfo("t2", [ColumnInfo("id", "int")], "id"),
+        "a": TableInfo("a", [ColumnInfo("b_id", "int")], None),
+        "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
     }
-    engine = DummyEngine()
-    pairs = asyncio.run(discover_relationships(schema, engine, n_rows=3, parallelism=1))
-    assert {p["relationship"] for p in pairs} == {"t1.id -> t2.id"}
+    rels = asyncio.run(discover_relationships(schema, DummyEngine()))
+    assert rels[0]["relationship"] == "a.b_id -> b.id"
+    assert rels[0]["confidence"] == 1.0
 
 
-def test_score_relation_uuid():
-    import uuid
-    from nl_sql_generator.schema_relationship import _score_relation
+def test_heuristic_relationship(monkeypatch):
+    inspector = DummyInspector()
+    monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
+    async def _sim(*args, **kwargs):
+        return 0.9
 
-    s = pd.Series([uuid.uuid4() for _ in range(5)])
-    assert _score_relation(s, s) == pytest.approx(1.0)
+    async def _val(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._comment_similarity", _sim
+    )
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._values_contained", _val
+    )
+
+    schema = {
+        "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None),
+        "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id"),
+    }
+    rels = asyncio.run(discover_relationships(schema, DummyEngine()))
+    assert rels[0]["relationship"] == "a.b_id -> b.id"
+    assert rels[0]["confidence"] > 0.9
+
+
+def test_reject_low_similarity(monkeypatch):
+    inspector = DummyInspector()
+    monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
+    )
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._values_contained", _always_contained
+    )
+    schema = {
+        "a": TableInfo("a", [ColumnInfo("foo", "int")], None),
+        "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
+    }
+    rels = asyncio.run(discover_relationships(schema, DummyEngine()))
+    assert rels == []
