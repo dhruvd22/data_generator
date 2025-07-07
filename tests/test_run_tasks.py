@@ -58,3 +58,20 @@ def test_schema_doc_dataset(tmp_path):
     }
     job.run_tasks([t])
     assert writer.seen == [{"question": "Q1", "doc": "doc"}]
+
+
+def test_schema_docs_dataset(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    job._run_schema_docs = lambda t: JobResult("", "", [{"question": "Q?", "answer": "A"}])
+
+    t = {
+        "phase": "schema_docs",
+        "question": "",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t])
+    assert writer.seen == [{"question": "Q?", "answer": "A"}]

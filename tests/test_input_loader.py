@@ -123,3 +123,19 @@ phases:
     assert len(tasks) == 2
     assert all(t["question"] == "" for t in tasks)
     assert all(t["metadata"]["prompt_template"] == "doc.txt" for t in tasks)
+
+
+def test_schema_docs_phase(tmp_path):
+    cfg = """
+phases:
+  - name: schema_docs
+    count: 3
+    prompt_template: schema_doc_template.txt
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"tbl": object()})
+    assert len(tasks) == 1
+    assert tasks[0]["phase"] == "schema_docs"
+    assert tasks[0]["metadata"]["count"] == 3
