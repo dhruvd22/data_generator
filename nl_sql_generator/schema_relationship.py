@@ -7,6 +7,7 @@ import asyncio
 import pandas as pd
 from pandas.api import types as ptypes
 from sqlalchemy import text
+import logging
 
 try:  # optional sempy/semopy support
     from semopy import Model
@@ -15,9 +16,13 @@ except Exception:  # pragma: no cover - optional dependency
 
 from .schema_loader import TableInfo
 
+log = logging.getLogger(__name__)
+
 
 async def _fetch_rows(engine, table: str, n_rows: int) -> pd.DataFrame:
     """Return ``n_rows`` sample rows from ``table`` as a DataFrame."""
+
+    log.info("Fetching %d rows from table %s", n_rows, table)
 
     def _run() -> pd.DataFrame:
         with engine.connect() as conn:
@@ -26,11 +31,15 @@ async def _fetch_rows(engine, table: str, n_rows: int) -> pd.DataFrame:
             rows = res.fetchall()
         return pd.DataFrame([dict(zip(cols, r)) for r in rows])
 
-    return await asyncio.to_thread(_run)
+    df = await asyncio.to_thread(_run)
+    log.info("Fetched %d rows from table %s", len(df), table)
+    return df
 
 
 def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
     """Return similarity score between two columns."""
+
+    log.debug("Scoring relation between series of length %d and %d", len(series_a), len(series_b))
     df = pd.DataFrame({"a": series_a, "b": series_b}).dropna()
     if df.empty:
         return 0.0
@@ -58,17 +67,29 @@ def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
             pass
 
     corr = df["a"].corr(df["b"])
-    return 0.0 if pd.isna(corr) else abs(float(corr))
+    score = 0.0 if pd.isna(corr) else abs(float(corr))
+    log.debug("Correlation score: %.4f", score)
+    return score
 
 
 def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> List[Dict[str, str]]:
     """Return relationship records for ``t1`` and ``t2``."""
+    log.info("Analyzing table pair %s <-> %s", t1, t2)
     relations: List[Dict[str, str]] = []
     for c1 in df1.columns:
         for c2 in df2.columns:
             score = _score_relation(df1[c1], df2[c2])
             # also consider overlapping values for categorical columns
             overlap = len(set(df1[c1].dropna()) & set(df2[c2].dropna()))
+            log.debug(
+                "Pair %s.%s vs %s.%s score=%.4f overlap=%d",
+                t1,
+                c1,
+                t2,
+                c2,
+                score,
+                overlap,
+            )
             if score > 0.8 or overlap > 0:
                 relations.append(
                     {
@@ -76,6 +97,7 @@ def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> Lis
                         "relationship": f"{t1}.{c1} -> {t2}.{c2}",
                     }
                 )
+    log.info("Found %d relationships between %s and %s", len(relations), t1, t2)
     return relations
 
 
@@ -86,7 +108,13 @@ async def discover_relationships(
     parallelism: int = 4,
 ) -> List[Dict[str, str]]:
     """Return relationship pairs extracted from the database."""
+    log.info(
+        "Discovering relationships using %d rows per table and parallelism=%d",
+        n_rows,
+        parallelism,
+    )
     tables = list(schema.keys())
+    log.info("Fetching sample rows for %d tables", len(tables))
     data = {tbl: await _fetch_rows(engine, tbl, n_rows) for tbl in tables}
 
     results: List[Dict[str, str]] = []
@@ -95,12 +123,18 @@ async def discover_relationships(
         for t2 in tables[i + 1 :]:
             df1 = data[t1]
             df2 = data[t2]
+            log.info("Scheduling analysis for %s <-> %s", t1, t2)
             tasks.append(asyncio.to_thread(_analyze_pair, t1, df1, t2, df2))
             if len(tasks) >= parallelism:
+                n = len(tasks)
                 for rels in await asyncio.gather(*tasks):
                     results.extend(rels)
+                log.info("Processed %d table pairs", n)
                 tasks = []
     if tasks:
+        n = len(tasks)
         for rels in await asyncio.gather(*tasks):
             results.extend(rels)
+        log.info("Processed final %d table pairs", n)
+    log.info("Discovered %d relationships", len(results))
     return results
