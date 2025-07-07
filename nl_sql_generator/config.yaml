@@ -32,5 +32,5 @@ phases:
     use_sample_rows: true
     dataset_output_file_dir: generated_datasets/sample_data
 
-budget_usd: 2.0
+budget_usd: 10.0
 openai_model: gpt-4.1
