@@ -10,11 +10,13 @@ Example:
     You are a PostgreSQL expert.
 """
 
-__all__ = ["build_prompt"]
+__all__ = ["build_prompt", "load_template_messages"]
 
 from textwrap import dedent
 import random
 from typing import Dict, List, Any
+import json
+import os
 
 
 def _schema_as_markdown(schema: Dict[str, Any]) -> str:
@@ -26,12 +28,48 @@ def _schema_as_markdown(schema: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def load_template_messages(
+    template_name: str, schema: Dict[str, Any], nl_question: str
+) -> List[Dict[str, str]]:
+    """Return chat messages rendered from ``template_name``.
+
+    The template should contain blocks starting with ``### role: <role>``.
+    Supported placeholders include ``{{schema_json}}`` and ``{{nl_question}}``.
+    """
+
+    path = os.path.join(os.path.dirname(__file__), "prompt_template", template_name)
+    with open(path, "r", encoding="utf-8") as fh:
+        text = fh.read()
+
+    replacements = {
+        "schema_json": json.dumps(schema, indent=2),
+        "nl_question": nl_question,
+    }
+    for key, val in replacements.items():
+        text = text.replace(f"{{{{{key}}}}}", val)
+
+    messages: List[Dict[str, str]] = []
+    role = None
+    buf: List[str] = []
+    for line in text.splitlines():
+        if line.startswith("### role:"):
+            if role is not None:
+                messages.append({"role": role, "content": "\n".join(buf).strip()})
+            role = line.split(":", 1)[1].strip()
+            buf = []
+        else:
+            buf.append(line)
+    if role is not None:
+        messages.append({"role": role, "content": "\n".join(buf).strip()})
+    return messages
+
+
 def build_prompt(
     nl_question: str,
     schema: Dict[str, Any],
     phase_cfg: Dict[str, Any],
     fewshot: List[Dict[str, str]] | None = None,
-) -> str:
+) -> Any:
     """Return a chat prompt for the OpenAI API.
 
     Args:
@@ -41,8 +79,12 @@ def build_prompt(
         fewshot: Optional few-shot examples.
 
     Returns:
-        Prompt string to send as ``user`` content.
+        Either a prompt string or list of chat messages.
     """
+    template_name = phase_cfg.get("prompt_template")
+    if template_name:
+        return load_template_messages(template_name, schema, nl_question)
+
     # Few-shot examples first (if any)
     example_block = ""
     if fewshot:

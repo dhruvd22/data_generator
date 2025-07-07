@@ -1,14 +1,13 @@
 phases:
   - name: builtins
-    builtins:
-      COUNT: 5
-      MAX: 5
-      AVG: 5
+    count: 5
+    builtins: [COUNT, MAX, AVG]
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/builtins
 
   - name: schema_doc
     count: 40
+    prompt_template: 00_schema-doc_QA_prompt.txt
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_doc
 

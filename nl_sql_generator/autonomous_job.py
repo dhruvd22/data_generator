@@ -167,12 +167,15 @@ class AutonomousJob:
     @log_call
     def _tool_generate_sql(self, nl_question: str) -> str:
         """LLM tool: generate SQL for ``nl_question``."""
-        prompt = build_prompt(nl_question, self.schema, self.phase_cfg)
+        prompt_obj = build_prompt(nl_question, self.schema, self.phase_cfg)
         log.info("Generating SQL for question: %s", nl_question)
-        messages = [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
-        ]
+        if isinstance(prompt_obj, list):
+            messages = prompt_obj
+        else:
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt_obj},
+            ]
         sql = self.client.run_jobs([messages])[0]
         sql = sql.strip().strip("`")
         sql = re.sub(r"(?i)^sql\s*", "", sql)
