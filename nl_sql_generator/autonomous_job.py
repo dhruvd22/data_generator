@@ -315,11 +315,12 @@ class AutonomousJob:
             return JobResult(task["question"], sql, data.get("rows", []))
 
     @log_call
-    def run_tasks(self, tasks: List[NLTask]) -> List[JobResult]:
+    def run_tasks(self, tasks: List[NLTask], run_version: str | None = None) -> List[JobResult]:
         """Process many tasks synchronously.
 
         Args:
             tasks: Sequence of tasks to run.
+            run_version: Optional suffix for dataset files.
 
         Returns:
             List of :class:`JobResult` objects in the same order.
@@ -327,6 +328,7 @@ class AutonomousJob:
 
         results = []
         total = len(tasks)
+        cleared: set[str] = set()
         for idx, t in enumerate(tasks, 1):
             log.info("Running task %d/%d: %s", idx, total, t.get("question"))
             res = asyncio.run(self.run_task(t))
@@ -334,7 +336,14 @@ class AutonomousJob:
 
             out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
             if out_dir:
-                path = os.path.join(out_dir, "dataset.jsonl")
+                file_name = "dataset.jsonl"
+                if run_version:
+                    file_name = f"dataset_{run_version}.jsonl"
+                path = os.path.join(out_dir, file_name)
+                if path not in cleared:
+                    os.makedirs(out_dir, exist_ok=True)
+                    open(path, "w").close()
+                    cleared.add(path)
                 if t.get("phase") in {"schema_docs", "schema_relationship"}:
                     for pair in res.rows:
                         self.writer.append_jsonl(pair, path)
