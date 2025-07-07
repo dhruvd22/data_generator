@@ -82,6 +82,13 @@ def load_tasks(
                 tasks.append({"phase": name, "question": str(q), "metadata": meta})
             continue
 
+        if phase_def.get("prompt_template") and not phase_def.get("builtins"):
+            count = int(phase_def.get("count", 1))
+            q = str(phase_def.get("question", ""))
+            for _ in range(count):
+                tasks.append({"phase": name, "question": q, "metadata": meta})
+            continue
+
         builtins_spec = phase_def.get("builtins")
         count = int(phase_def.get("count", 0))
 

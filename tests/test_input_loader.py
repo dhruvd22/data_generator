@@ -107,3 +107,19 @@ phases:
     assert len(tasks) == 2
     assert all("sample rows" in t["question"] for t in tasks)
     assert all(t["metadata"]["n_rows"] == 2 for t in tasks)
+
+
+def test_prompt_template_phase(tmp_path):
+    cfg = """
+phases:
+  - name: schema_doc
+    count: 2
+    prompt_template: doc.txt
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"tbl": object()})
+    assert len(tasks) == 2
+    assert all(t["question"] == "" for t in tasks)
+    assert all(t["metadata"]["prompt_template"] == "doc.txt" for t in tasks)
