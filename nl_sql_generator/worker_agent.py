@@ -16,7 +16,7 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
         if not line or line.startswith("```"):
             continue
         # Drop common list prefixes like "-" or "1." and code fence ticks
-        line = line.lstrip("-*0123456789. ").strip('`')
+        line = line.lstrip("-*0123456789. ").strip("`")
         if not line:
             continue
         try:
@@ -27,8 +27,9 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
             pairs.append(obj)
     return pairs
 
-from .prompt_builder import build_schema_doc_prompt
-from .openai_responses import ResponsesClient
+
+from .prompt_builder import build_schema_doc_prompt  # noqa: E402
+from .openai_responses import ResponsesClient  # noqa: E402
 
 
 class WorkerAgent:

@@ -1,4 +1,3 @@
-import pytest
 from nl_sql_generator.worker_agent import _parse_pairs
 
 
