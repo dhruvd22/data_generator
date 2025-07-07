@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, List
 import asyncio
 import pandas as pd
+from pandas.api import types as ptypes
 from sqlalchemy import text
 
 try:  # optional sempy/semopy support
@@ -33,6 +34,15 @@ def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
     df = pd.DataFrame({"a": series_a, "b": series_b}).dropna()
     if df.empty:
         return 0.0
+
+    def _to_numeric(s: pd.Series) -> pd.Series:
+        if ptypes.is_numeric_dtype(s) or ptypes.is_bool_dtype(s):
+            return pd.to_numeric(s, errors="coerce")
+        return pd.Series(pd.factorize(s.astype(str))[0], index=s.index)
+
+    df["a"] = _to_numeric(df["a"])
+    df["b"] = _to_numeric(df["b"])
+
     if Model is not None:
         try:  # pragma: no cover - best effort sempy usage
             m = Model("b ~ a")
@@ -42,7 +52,9 @@ def _score_relation(series_a: pd.Series, series_b: pd.Series) -> float:
             return abs(float(val))
         except Exception:  # pragma: no cover - fallback
             pass
-    return abs(df["a"].corr(df["b"]))
+
+    corr = df["a"].corr(df["b"])
+    return 0.0 if pd.isna(corr) else abs(float(corr))
 
 
 def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> List[Dict[str, str]]:
