@@ -161,23 +161,6 @@ class AutonomousJob:
             },
         ]
 
-    def _run_schema_doc(self, task: NLTask) -> JobResult:
-        """Handle the ``schema_doc`` phase without the SQL toolchain."""
-        prompt_obj = build_prompt(task.get("question", ""), self.schema, self.phase_cfg)
-        if isinstance(prompt_obj, list):
-            messages = prompt_obj
-        else:
-            messages = [
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": prompt_obj},
-            ]
-        log.info("Generating schema documentation")
-        text = self.client.run_jobs([messages])[0]
-        try:
-            docs = json.loads(text)
-        except Exception:  # pragma: no cover - depends on LLM output
-            docs = []
-        return JobResult(task.get("question", ""), "", docs)
 
     def _run_schema_docs(self, task: NLTask) -> JobResult:
         """Generate NL⇄schema documentation pairs."""
@@ -276,8 +259,6 @@ class AutonomousJob:
 
         self.phase_cfg = task.get("metadata", {})
 
-        if task.get("phase") == "schema_doc":
-            return self._run_schema_doc(task)
         if task.get("phase") == "schema_docs":
             return self._run_schema_docs(task)
 
@@ -360,13 +341,7 @@ class AutonomousJob:
             out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
             if out_dir:
                 path = os.path.join(out_dir, "dataset.jsonl")
-                if t.get("phase") == "schema_doc":
-                    for item in res.rows:
-                        doc = item.get("table_doc", "")
-                        for q in item.get("sample_questions", []):
-                            self.writer.append_jsonl({"question": q, "doc": doc}, path)
-                        log.info("Wrote schema docs to %s", path)
-                elif t.get("phase") == "schema_docs":
+                if t.get("phase") == "schema_docs":
                     for pair in res.rows:
                         self.writer.append_jsonl(pair, path)
                     log.info("Wrote schema QA pairs to %s", path)

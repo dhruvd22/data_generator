@@ -112,7 +112,7 @@ phases:
 def test_prompt_template_phase(tmp_path):
     cfg = """
 phases:
-  - name: schema_doc
+  - name: docs_phase
     count: 2
     prompt_template: doc.txt
 """
