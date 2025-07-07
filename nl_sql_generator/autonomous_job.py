@@ -178,6 +178,21 @@ class AutonomousJob:
         pairs = await pool.generate()
         return JobResult(task.get("question", ""), "", pairs)
 
+    async def _run_schema_relationship_async(self, task: NLTask) -> JobResult:
+        """Generate table relationship pairs using sample rows."""
+
+        from .schema_relationship import discover_relationships
+
+        n_rows = int(task.get("metadata", {}).get("n_rows", 5))
+        parallelism = int(task.get("metadata", {}).get("parallelism", 1))
+        pairs = await discover_relationships(
+            self.schema,
+            self.writer.eng,
+            n_rows=n_rows,
+            parallelism=parallelism,
+        )
+        return JobResult(task.get("question", ""), "", pairs)
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -238,6 +253,8 @@ class AutonomousJob:
 
         if task.get("phase") == "schema_docs":
             return await self._run_schema_docs_async(task)
+        if task.get("phase") == "schema_relationship":
+            return await self._run_schema_relationship_async(task)
 
         messages = [
             {
@@ -318,7 +335,7 @@ class AutonomousJob:
             out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
             if out_dir:
                 path = os.path.join(out_dir, "dataset.jsonl")
-                if t.get("phase") == "schema_docs":
+                if t.get("phase") in {"schema_docs", "schema_relationship"}:
                     for pair in res.rows:
                         self.writer.append_jsonl(pair, path)
                     log.info("Wrote schema QA pairs to %s", path)

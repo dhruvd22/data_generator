@@ -139,3 +139,18 @@ phases:
     assert len(tasks) == 1
     assert tasks[0]["phase"] == "schema_docs"
     assert tasks[0]["metadata"]["count"] == 3
+
+
+def test_schema_relationship_phase(tmp_path):
+    cfg = """
+phases:
+  - name: schema_relationship
+    n_rows: 4
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t": object()})
+    assert len(tasks) == 1
+    assert tasks[0]["phase"] == "schema_relationship"
+    assert tasks[0]["metadata"]["n_rows"] == 4

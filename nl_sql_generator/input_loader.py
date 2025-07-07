@@ -91,6 +91,17 @@ def load_tasks(
             meta_with_count = {**meta, "count": count}
             tasks.append({"phase": name, "question": q, "metadata": meta_with_count})
             continue
+        if name.lower() == "schema_relationship":
+            q = str(
+                phase_def.get(
+                    "question",
+                    "Generate relationship pairs between tables using sample rows.",
+                )
+            )
+            n_rows = int(phase_def.get("n_rows", 5))
+            meta_with_rows = {**meta, "n_rows": n_rows}
+            tasks.append({"phase": name, "question": q, "metadata": meta_with_rows})
+            continue
         questions = phase_def.get("questions")
         if questions:
             for q in questions:
