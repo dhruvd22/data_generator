@@ -85,10 +85,26 @@ def _compatible_types(series_a: pd.Series, series_b: pd.Series) -> bool:
     return False
 
 
-def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> List[Dict[str, str]]:
+def _matches_pk_name(pk: str, column: str, table: str) -> bool:
+    """Return ``True`` if ``column`` looks like a foreign key to ``pk``."""
+    col = column.lower()
+    pk = pk.lower()
+    table_base = table.rstrip("s").lower()
+    return col == pk or col == f"{table_base}_{pk}" or col.endswith(f"_{pk}")
+
+
+def _analyze_pair(
+    t1: str,
+    df1: pd.DataFrame,
+    t2: str,
+    df2: pd.DataFrame,
+    pk1: str | None = None,
+    pk2: str | None = None,
+) -> List[Dict[str, str]]:
     """Return relationship records for ``t1`` and ``t2``."""
     log.info("Analyzing table pair %s <-> %s", t1, t2)
     relations: List[Dict[str, str]] = []
+    seen = set()
     for c1 in df1.columns:
         for c2 in df2.columns:
             s1 = df1[c1]
@@ -113,13 +129,22 @@ def _analyze_pair(t1: str, df1: pd.DataFrame, t2: str, df2: pd.DataFrame) -> Lis
                 ratio1,
                 ratio2,
             )
-            if ov_count >= 2 and (score >= 0.9 or (ratio1 >= 0.5 and ratio2 >= 0.5)):
-                relations.append(
-                    {
-                        "question": f"How is {t1}.{c1} related to {t2}.{c2}?",
-                        "relationship": f"{t1}.{c1} -> {t2}.{c2}",
-                    }
-                )
+            base_condition = ov_count >= 2 and (score >= 0.9 or (ratio1 >= 0.5 and ratio2 >= 0.5))
+            pk_condition = False
+            if pk1 and c1 == pk1 and _matches_pk_name(pk1, c2, t1):
+                pk_condition = ov_count >= 2 and (ratio2 >= 0.5 or score >= 0.8)
+            if pk2 and c2 == pk2 and _matches_pk_name(pk2, c1, t2):
+                pk_condition = pk_condition or (ov_count >= 2 and (ratio1 >= 0.5 or score >= 0.8))
+            if base_condition or pk_condition:
+                rel = f"{t1}.{c1} -> {t2}.{c2}"
+                if rel not in seen:
+                    relations.append(
+                        {
+                            "question": f"How is {t1}.{c1} related to {t2}.{c2}?",
+                            "relationship": rel,
+                        }
+                    )
+                    seen.add(rel)
     log.info("Found %d relationships between %s and %s", len(relations), t1, t2)
     return relations
 
@@ -147,7 +172,9 @@ async def discover_relationships(
             df1 = data[t1]
             df2 = data[t2]
             log.info("Scheduling analysis for %s <-> %s", t1, t2)
-            tasks.append(asyncio.to_thread(_analyze_pair, t1, df1, t2, df2))
+            pk1 = schema[t1].primary_key
+            pk2 = schema[t2].primary_key
+            tasks.append(asyncio.to_thread(_analyze_pair, t1, df1, t2, df2, pk1=pk1, pk2=pk2))
             if len(tasks) >= parallelism:
                 n = len(tasks)
                 for rels in await asyncio.gather(*tasks):
