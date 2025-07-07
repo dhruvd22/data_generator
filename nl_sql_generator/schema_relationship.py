@@ -26,6 +26,7 @@ log = logging.getLogger(__name__)
 # helper functions
 # ----------------------------------------------------------------------
 
+
 def _name_similarity(a: str, b: str) -> float:
     return SequenceMatcher(None, a.lower(), b.lower()).ratio()
 
@@ -46,9 +47,7 @@ async def _comment_similarity(c1: str | None, c2: str | None) -> float:
 
     def _embed() -> tuple[np.ndarray, np.ndarray]:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        resp = client.embeddings.create(
-            model="text-embedding-3-small", input=[c1, c2]
-        )
+        resp = client.embeddings.create(model="text-embedding-3-small", input=[c1, c2])
         e1 = np.array(resp.data[0].embedding, dtype=float)
         e2 = np.array(resp.data[1].embedding, dtype=float)
         return e1, e2
@@ -79,9 +78,7 @@ async def _values_contained(
             vals_a = {row[0] for row in conn.execute(q1)}
             if not vals_a:
                 return False
-            q2 = text(
-                f"SELECT DISTINCT {c_to} FROM {t_to} WHERE {c_to} IS NOT NULL"
-            )
+            q2 = text(f"SELECT DISTINCT {c_to} FROM {t_to} WHERE {c_to} IS NOT NULL")
             vals_b = {row[0] for row in conn.execute(q2)}
         if not vals_a:
             return False
@@ -98,6 +95,7 @@ async def _values_contained(
 # ----------------------------------------------------------------------
 # main logic
 # ----------------------------------------------------------------------
+
 
 async def discover_relationships(
     schema: Dict[str, TableInfo], engine, sample_limit: int = 5000
@@ -168,9 +166,7 @@ async def discover_relationships(
                     sim = max(
                         _name_similarity(fcol.name, rcol.name),
                         _name_similarity(fcol.name, f"{rtbl}_{rcol.name}"),
-                        _name_similarity(
-                            fcol.name, f"{rtbl.rstrip('s')}_{rcol.name}"
-                        ),
+                        _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{rcol.name}"),
                     )
                     if sim < 0.8:
                         continue
@@ -197,4 +193,3 @@ async def discover_relationships(
 
     results.sort(key=lambda r: r["confidence"], reverse=True)
     return results
-
