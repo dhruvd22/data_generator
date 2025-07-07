@@ -82,8 +82,24 @@ config.yaml ──▶ InputLoader ──▶ AutonomousJob
    - ``SQLValidator`` runs ``EXPLAIN`` against the database and reports errors.
    - ``Critic`` reviews the SQL and can return a fixed version.
    - ``Writer`` executes the final SQL and returns anonymised rows.
+
 4. Each result is optionally appended to a JSONL dataset as specified in the
    phase metadata.
+
+## Modules
+
+- `input_loader` – reads tasks from `config.yaml`
+- `schema_loader` – introspects database tables
+- `schema_relationship` – infers relationships between tables
+- `prompt_builder` – crafts prompts for the LLM
+- `openai_responses` – async wrapper around OpenAI
+- `sql_validator` – validates generated SQL
+- `critic` – reviews and fixes SQL
+- `writer` – executes SQL and writes dataset entries
+- `agent_pool` & `worker_agent` – parallel schema documentation helpers
+- `autonomous_job` – orchestrates the entire pipeline
+- `logger` – sets up rich console and file logging
+- `main` – CLI entrypoint
 
 ## Running tests
 
