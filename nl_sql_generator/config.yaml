@@ -24,7 +24,7 @@ phases:
 
   - name: joins
     count: 25
-    use_sample_rows: false
+    use_sample_rows: true
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
 
