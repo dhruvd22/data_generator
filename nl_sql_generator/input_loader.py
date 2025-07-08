@@ -28,6 +28,16 @@ def _natural_builtin_question(fn: str, table: str) -> str:
     )
 
 
+def _natural_table_question(table: str) -> str:
+    """Return an instruction asking the LLM to craft NL/SQL for one table."""
+
+    table = table.replace("_", " ")
+    return (
+        f"Create a natural language question about the {table} table."
+        " Then provide the SQL query answering it as JSON with keys 'question' and 'sql'."
+    )
+
+
 class NLTask(TypedDict):
     """A single natural-language question with context.
 
@@ -112,6 +122,14 @@ def load_tasks(
             n_rows = int(phase_def.get("n_rows", 5))
             meta_with_rows = {**meta, "n_rows": n_rows}
             tasks.append({"phase": name, "question": q, "metadata": meta_with_rows})
+            continue
+        if name.lower() == "single_table":
+            count = int(phase_def.get("count", 1))
+            for tbl in table_names or ["table_1"]:
+                for _ in range(count):
+                    q = _natural_table_question(tbl)
+                    meta_with_tbl = {**meta, "table": tbl}
+                    tasks.append({"phase": name, "question": q, "metadata": meta_with_tbl})
             continue
         questions = phase_def.get("questions")
         if questions:
