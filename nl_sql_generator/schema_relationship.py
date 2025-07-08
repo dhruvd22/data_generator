@@ -121,9 +121,7 @@ async def _values_contained(
     engine, t_from: str, c_from: str, t_to: str, c_to: str, limit: int
 ) -> bool:
     """Return ``True`` if sampled values from ``t_from.c_from`` mostly appear in ``t_to.c_to``."""
-    log.debug(
-        "Checking values contained %s.%s -> %s.%s", t_from, c_from, t_to, c_to
-    )
+    log.debug("Checking values contained %s.%s -> %s.%s", t_from, c_from, t_to, c_to)
     ratio = await _value_overlap(engine, t_from, c_from, t_to, c_to, limit)
     return ratio >= 0.95
 
@@ -223,7 +221,14 @@ async def discover_relationships(
     insp = inspect(engine)
     validator = None
     if getattr(engine, "url", None):
-        validator = SQLValidator(str(engine.url))
+        # ``str(engine.url)`` hides the password which breaks authentication.
+        # Use ``render_as_string`` to obtain the full connection string.
+        url = engine.url
+        if hasattr(url, "render_as_string"):
+            db_url = url.render_as_string(hide_password=False)
+        else:  # pragma: no cover - fallback for custom URL objects
+            db_url = str(url)
+        validator = SQLValidator(db_url)
     results: List[Dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -321,9 +326,7 @@ async def discover_relationships(
         if not ok:
             return
 
-        sql = (
-            f"SELECT 1 FROM {ftbl} a JOIN {rtbl} b ON a.{fcol.name} = b.{pk} LIMIT 1"
-        )
+        sql = f"SELECT 1 FROM {ftbl} a JOIN {rtbl} b ON a.{fcol.name} = b.{pk} LIMIT 1"
         validator_ok = True
         if validator:
             validator_ok, _ = await asyncio.to_thread(validator.check, sql)
