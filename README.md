@@ -146,18 +146,26 @@ SELECT COUNT(*) FROM payers
 ```text
 .
 ├── nl_sql_generator/       # library modules and CLI
-│   ├── autonomous_job.py   # orchestrates the tool pipeline
-│   ├── input_loader.py     # reads YAML tasks
-│   ├── schema_loader.py    # introspects PostgreSQL
-│   ├── prompt_builder.py   # constructs chat prompts
-│   ├── openai_responses.py # async OpenAI client with budget tracking
-│   ├── sql_validator.py    # EXPLAIN-based validation
-│   ├── critic.py           # optional SQL review and fixes
-│   ├── writer.py           # executes SQL and anonymises rows
-│   ├── agent_pool.py       # parallel schema doc workers
-│   ├── worker_agent.py     # individual schema QA generator
-│   ├── config.yaml         # sample phases configuration
-│   └── requirements.txt    # Python dependencies
+│   ├── autonomous_job.py       # orchestrates the tool pipeline
+│   ├── input_loader.py         # reads YAML tasks
+│   ├── schema_loader.py        # introspects PostgreSQL
+│   ├── prompt_builder.py       # constructs chat prompts
+│   ├── openai_responses.py     # async OpenAI client with budget tracking
+│   ├── sql_validator.py        # EXPLAIN-based validation
+│   ├── critic.py               # optional SQL review and fixes
+│   ├── writer.py               # executes SQL and anonymises rows
+│   ├── agent_pool.py           # parallel schema doc workers
+│   ├── worker_agent.py         # individual schema QA generator
+│   ├── join_pool.py            # coordinates join generation workers
+│   ├── join_worker.py          # produces multi-table SQL joins
+│   ├── schema_relationship.py  # infers relationships between tables
+│   ├── logger.py               # structured logging helpers
+│   ├── main.py                 # CLI entry points
+│   ├── validator.py            # no-op validator used by agents
+│   ├── prompt_template/        # Jinja templates for prompts
+│   ├── table_ddls.sql          # example DDLs for tests
+│   ├── config.yaml             # sample phases configuration
+│   └── requirements.txt        # Python dependencies
 ├── tests/                  # pytest suite
 └── README.md
 ```
