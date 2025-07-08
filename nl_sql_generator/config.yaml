@@ -1,5 +1,5 @@
 defaults:
-  parallelism: 4
+  parallelism: 10
 phases:
   - name: builtins
     count: 5
