@@ -72,11 +72,35 @@ def test_heuristic_relationship(monkeypatch):
     monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _val)
 
     schema = {
-        "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None),
-        "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id"),
+        "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None, "tbl a"),
+        "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id", "tbl b"),
     }
     rels = asyncio.run(discover_relationships(schema, DummyEngine()))
     assert rels[0]["relationship"] == "a.b_id -> b.id"
+
+
+def test_table_comment_similarity(monkeypatch):
+    inspector = DummyInspector()
+    monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
+
+    calls = []
+
+    async def _sim(a, b):
+        calls.append((a, b))
+        return 0.9
+
+    async def _val(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._comment_similarity", _sim)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _val)
+
+    schema = {
+        "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None, "A table"),
+        "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id", "B table"),
+    }
+    asyncio.run(discover_relationships(schema, DummyEngine()))
+    assert any("A table" in c[0] or "B table" in c[1] for c in calls)
 
 
 def test_reject_low_similarity(monkeypatch):

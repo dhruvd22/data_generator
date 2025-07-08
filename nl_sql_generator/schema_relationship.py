@@ -64,6 +64,18 @@ async def _comment_similarity(c1: str | None, c2: str | None) -> float:
     return float(np.dot(emb1, emb2) / denom)
 
 
+async def _combined_comment_similarity(
+    c1: str | None, t1: str | None, c2: str | None, t2: str | None
+) -> float:
+    """Return max similarity using column comments alone or combined with table comments."""
+
+    base = await _comment_similarity(c1, c2)
+    joined1 = " ".join(x for x in [c1, t1] if x)
+    joined2 = " ".join(x for x in [c2, t2] if x)
+    combined = await _comment_similarity(joined1 or None, joined2 or None)
+    return max(base, combined)
+
+
 async def _value_overlap(
     engine, t_from: str, c_from: str, t_to: str, c_to: str, limit: int
 ) -> float:
@@ -155,7 +167,9 @@ async def discover_relationships(
     # mapping of column info
     type_map: Dict[tuple[str, str], str] = {}
     comment_map: Dict[tuple[str, str], str | None] = {}
+    table_comments: Dict[str, str | None] = {}
     for t, info in schema.items():
+        table_comments[t] = getattr(info, "comment", None)
         for col in info.columns:
             key = (t, col.name)
             type_map[key] = col.type_
@@ -186,7 +200,13 @@ async def discover_relationships(
                     conf = 0.75
                     if fcol.name.lower() in {f"{rtbl}_id", f"{rtbl.rstrip('s')}_id"}:
                         conf += 0.05
-                    com_sim = await _comment_similarity(fcomment, rcomment)
+                    tcom_sim = await _combined_comment_similarity(
+                        fcomment,
+                        table_comments.get(ftbl),
+                        rcomment,
+                        table_comments.get(rtbl),
+                    )
+                    com_sim = tcom_sim
                     if com_sim >= 0.83:
                         conf += 0.1
                     overlap = await _value_overlap(

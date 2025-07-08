@@ -51,6 +51,7 @@ class TableInfo:
     name: str
     columns: List[ColumnInfo]
     primary_key: str | None = None
+    comment: str | None = None
 
 
 class SchemaLoader:
@@ -73,11 +74,14 @@ class SchemaLoader:
         if not db_url:
             raise ValueError("Provide DATABASE_URL env var or param")
 
+        log.info("Loading schema from %s", db_url)
         eng = create_engine(db_url, pool_pre_ping=True)
         insp = inspect(eng)
 
         schema: Dict[str, TableInfo] = {}
         for tbl in insp.get_table_names():
+            t_comment = insp.get_table_comment(tbl).get("text")
+            log.debug("Processing table %s comment=%r", tbl, t_comment)
             cols = []
             for c in insp.get_columns(tbl):
                 cols.append(
@@ -87,9 +91,11 @@ class SchemaLoader:
                         c.get("comment"),
                     )
                 )
+            log.debug("Discovered columns for %s: %s", tbl, [c.name for c in cols])
             pk_cols = insp.get_pk_constraint(tbl).get("constrained_columns")
             pk = pk_cols[0] if pk_cols else None
-            schema[tbl] = TableInfo(tbl, cols, pk)
+            schema[tbl] = TableInfo(tbl, cols, pk, t_comment)
+        log.info("Loaded %d tables", len(schema))
 
         return schema
 
@@ -114,6 +120,7 @@ class SchemaLoader:
             tables[name] = {
                 "columns": cols,
                 "primary_key": info.primary_key,
+                "comment": info.comment,
             }
         return {"tables": tables}
 
