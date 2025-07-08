@@ -322,10 +322,16 @@ class AutonomousJob:
             except Exception:
                 data = {"sql": content or "", "rows": []}
             sql = _clean_sql(data.get("sql", ""))
-            return JobResult(task["question"], sql, data.get("rows", []))
+            result = JobResult(task["question"], sql, data.get("rows", []))
+            ok, err = self.validator.check(result.sql)
+            if not ok:
+                raise RuntimeError(f"SQL validation failed: {err}")
+            return result
 
     @log_call
-    def run_tasks(self, tasks: List[NLTask], run_version: str | None = None) -> List[JobResult]:
+    def run_tasks(
+        self, tasks: List[NLTask], run_version: str | None = None
+    ) -> List[JobResult]:
         """Process many tasks synchronously.
 
         Args:
@@ -356,7 +362,10 @@ class AutonomousJob:
                     cleared.add(path)
                 if t.get("phase") in {"schema_docs", "schema_relationship"}:
                     for pair in res.rows:
-                        if t.get("phase") == "schema_relationship" and "confidence" in pair:
+                        if (
+                            t.get("phase") == "schema_relationship"
+                            and "confidence" in pair
+                        ):
                             pair = {k: v for k, v in pair.items() if k != "confidence"}
                         self.writer.append_jsonl(pair, path)
                     log.info("Wrote schema QA pairs to %s", path)
