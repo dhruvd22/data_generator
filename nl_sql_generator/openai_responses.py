@@ -4,7 +4,7 @@ This helper wraps :class:`openai.AsyncOpenAI` to manage request concurrency,
 budget tracking and retries.
 
 Example:
-    >>> client = ResponsesClient(model="gpt-4o-mini-resp", budget_usd=1.0)
+    >>> client = ResponsesClient(model="gpt-4.1", budget_usd=1.0)
     >>> resp = client.run_jobs([[{"role": "user", "content": "Say hi"}]])
     >>> print(resp[0])
 """
@@ -56,7 +56,7 @@ def _estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
     Returns:
         Estimated USD cost based on static pricing.
     """
-    # Hard-coded pricing for gpt-4o-mini-resp
+    # Hard-coded pricing for gpt-4.1
     in_rate = 0.005 / 1000
     out_rate = 0.015 / 1000
     return input_tokens * in_rate + output_tokens * out_rate
@@ -130,7 +130,7 @@ class ResponsesClient:
         usage: Aggregate token and cost tracking.
     """
 
-    def __init__(self, model: str = "gpt-4o-mini-resp", budget_usd: float = 0.0) -> None:
+    def __init__(self, model: str = "gpt-4.1", budget_usd: float = 0.0) -> None:
         """Instantiate the client.
 
         Args:
@@ -359,7 +359,7 @@ async def acomplete(prompt: list[dict] | str, model: str | None = None) -> str:
     """Convenience wrapper using a global :class:`ResponsesClient`."""
 
     global _default_client
-    model = model or "gpt-4o-mini-resp"
+    model = model or "gpt-4.1"
     if _default_client is None or _default_client.model != model:
         budget = float(os.getenv("OPENAI_BUDGET_USD", "0"))
         _default_client = ResponsesClient(model=model, budget_usd=budget)

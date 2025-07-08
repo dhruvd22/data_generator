@@ -32,7 +32,7 @@ class Critic:
             log_dir: Directory where reviews are logged.
         """
 
-        self.client = client or ResponsesClient(model="gpt-4.1")
+        self.client = client or ResponsesClient()
         self.log_dir = log_dir
         os.makedirs(self.log_dir, exist_ok=True)
 
