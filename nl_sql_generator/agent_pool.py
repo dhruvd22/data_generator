@@ -1,3 +1,5 @@
+"""Coordinate multiple :class:`WorkerAgent` instances in parallel."""
+
 import asyncio
 import math
 import itertools
@@ -9,6 +11,7 @@ from .openai_responses import ResponsesClient
 
 
 class AgentPool:
+    """Simple orchestrator that fans out tasks to worker agents."""
     def __init__(
         self,
         schema: Dict[str, Any],
@@ -17,6 +20,16 @@ class AgentPool:
         writer,
         client: ResponsesClient,
     ) -> None:
+        """Create the pool.
+
+        Args:
+            schema: Full database schema mapping.
+            phase_cfg: Phase configuration controlling generation.
+            validator_cls: Validator class used by workers.
+            writer: Result writer instance used by workers.
+            client: Shared :class:`ResponsesClient`.
+        """
+
         self.schema = schema
         self.cfg = phase_cfg
         self.validator_cls = validator_cls
@@ -27,13 +40,15 @@ class AgentPool:
         self.log = logging.getLogger(__name__)
 
     def _schema_chunks(self) -> List[Dict[str, Any]]:
-        """Return per-worker schema slices."""
+        """Return list of schema subsets split for each worker."""
         n = int(self.cfg.get("parallelism", 1))
         table_names = list(self.schema.keys())
         chunks = [table_names[i::n] for i in range(n)]
         return [{t: self.schema[t] for t in c} for c in chunks]
 
     async def _run_worker(self, batch_size: int, worker_id: int, schema: Dict[str, Any]) -> int:
+        """Launch a single :class:`WorkerAgent` and merge its output."""
+
         self.log.info("Worker %d starting batch size %d", worker_id, batch_size)
         agent = WorkerAgent(
             schema,
@@ -52,6 +67,8 @@ class AgentPool:
         return delta
 
     async def generate(self) -> List[Dict[str, str]]:
+        """Generate unique Q&A pairs across multiple workers."""
+
         goal = int(self.cfg.get("count", 1))
         n_workers = int(self.cfg.get("parallelism", 1))
         k = math.ceil(goal / n_workers)
@@ -68,4 +85,5 @@ class AgentPool:
             await asyncio.gather(*jobs)
             attempts += 1
             self.log.info("Attempt %d complete, total pairs=%d", attempts, len(self.seen))
+        self.log.info("Generation finished with %d pairs", len(self.seen))
         return [{"question": q, "answer": a} for q, a in itertools.islice(self.seen, goal)]
