@@ -54,7 +54,10 @@ def _clean_sql(sql: str) -> str:
     sanitized = sql.replace("\n", " ").replace("\r", " ")
     sanitized = sanitized.replace("\t", " ").replace("\\", "")
     sanitized = " ".join(sanitized.split())
-    return sanitized.strip()
+    sanitized = sanitized.strip()
+    if sanitized.endswith(";"):
+        sanitized = sanitized[:-1].strip()
+    return sanitized
 
 
 @dataclass
