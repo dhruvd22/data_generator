@@ -28,13 +28,18 @@ def _natural_builtin_question(fn: str, table: str) -> str:
     )
 
 
-def _natural_table_question(table: str) -> str:
-    """Return an instruction asking the LLM to craft NL/SQL for one table."""
+def _natural_table_question(table: str, count: int = 1) -> str:
+    """Return an instruction asking the LLM to craft NL/SQL for ``table``."""
 
     table = table.replace("_", " ")
+    if count <= 1:
+        return (
+            f"Create a natural language question about the {table} table."
+            " Then provide the SQL query answering it as JSON with keys 'question' and 'sql'."
+        )
     return (
-        f"Create a natural language question about the {table} table."
-        " Then provide the SQL query answering it as JSON with keys 'question' and 'sql'."
+        f"Create {count} unique natural language questions about the {table} table."
+        " Provide the SQL answering each question. Return one JSON object per line with keys 'question' and 'sql'."
     )
 
 
@@ -125,11 +130,16 @@ def load_tasks(
             continue
         if name.lower() == "single_table":
             count = int(phase_def.get("count", 1))
-            for tbl in table_names or ["table_1"]:
-                for _ in range(count):
-                    q = _natural_table_question(tbl)
-                    meta_with_tbl = {**meta, "table": tbl}
-                    tasks.append({"phase": name, "question": q, "metadata": meta_with_tbl})
+            table_list = table_names or ["table_1"]
+            for tbl in table_list:
+                q = _natural_table_question(tbl, count)
+                meta_with_tbl = {
+                    **meta,
+                    "table": tbl,
+                    "count": count,
+                    "parallelism": len(table_list),
+                }
+                tasks.append({"phase": name, "question": q, "metadata": meta_with_tbl})
             continue
         questions = phase_def.get("questions")
         if questions:

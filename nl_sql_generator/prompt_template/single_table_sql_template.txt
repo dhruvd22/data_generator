@@ -1,5 +1,5 @@
 ### role: system
-You are a PostgreSQL expert. Craft a natural language question about the `{{table}}` table using only columns from that table. Use the schema and sample rows for context. Respond with a JSON object containing "question" and "sql" only.
+You are a PostgreSQL expert. Craft {{count}} unique natural language questions about the `{{table}}` table using only columns from that table. Use the schema and sample rows for context. Respond with one JSON object per line containing "question" and "sql" only.
 
 ### role: user
 SCHEMA_JSON:

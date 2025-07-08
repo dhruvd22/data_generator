@@ -129,3 +129,28 @@ def test_deduplicate_pairs(tmp_path):
     }
     job.run_tasks([t, t])
     assert writer.seen == [{"question": "same?", "sql": "SELECT 1"}]
+
+
+def test_single_table_multiple_pairs(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult("", "", [
+            {"question": "Q1", "sql": "S1"},
+            {"question": "Q2", "sql": "S2"},
+        ])
+
+    job.run_task = _rt
+    t = {
+        "phase": "single_table",
+        "question": "",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t])
+    assert writer.seen == [
+        {"question": "Q1", "sql": "S1"},
+        {"question": "Q2", "sql": "S2"},
+    ]
