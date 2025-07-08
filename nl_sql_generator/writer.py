@@ -34,7 +34,9 @@ class ResultWriter:
             ValueError: If no database URL can be determined.
         """
 
-        db_url = db_url or os.getenv("DATABASE_URL")
+        # Environment variables may include trailing newlines when sourced from
+        # files or CI secrets. Strip whitespace to avoid authentication errors.
+        db_url = (db_url or os.getenv("DATABASE_URL", "")).strip()
         if not db_url:
             raise ValueError("DATABASE_URL not set")
         self.eng = create_engine(db_url, pool_pre_ping=True, connect_args={"sslmode": "require"})
