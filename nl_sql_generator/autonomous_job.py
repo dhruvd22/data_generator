@@ -228,9 +228,21 @@ class AutonomousJob:
             ]
         text = await self.client.acomplete(messages)
         pairs = _parse_pairs(text)
+        n_rows = int(self.phase_cfg.get("n_rows", 5))
         for p in pairs:
             if "sql" in p:
-                p["sql"] = _clean_sql(p["sql"])
+                sql = _clean_sql(p["sql"])
+                ok, err = self.validator.check(sql)
+                if not ok:
+                    log.warning("SQL validation failed: %s", err)
+                    p["sql"] = "FAIL"
+                    continue
+                try:
+                    self.writer.fetch(sql, n_rows)
+                    p["sql"] = sql
+                except Exception as err:
+                    log.warning("Execution failed for %s: %s", sql, err)
+                    p["sql"] = "FAIL"
         return JobResult(task.get("question", ""), "", pairs)
 
     # ------------------------------------------------------------------
@@ -478,6 +490,12 @@ class AutonomousJob:
 
         await asyncio.gather(*[_runner(i, t) for i, t in enumerate(tasks)])
         log.info("All %d tasks completed", len(tasks))
+        log.info(
+            "Token usage in=%d out=%d requests=%d",
+            getattr(self.client, "tokens_in", 0),
+            getattr(self.client, "tokens_out", 0),
+            getattr(self.client, "request_count", 0),
+        )
         return [r for r in results if r is not None]
 
     @log_call

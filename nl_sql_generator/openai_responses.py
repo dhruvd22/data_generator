@@ -143,6 +143,7 @@ class ResponsesClient:
         self.tokens_in = 0
         self.tokens_out = 0
         self.cost_spent = 0.0
+        self.request_count = 0
         self.usage = Usage()
 
         api_key = os.getenv("OPENAI_API_KEY")
@@ -317,6 +318,7 @@ class ResponsesClient:
                     self.tokens_out += out_tok
                     self.cost_spent += est_cost
                     self.usage.add(in_tok, out_tok, est_cost)
+                    self.request_count += 1
                 log.info(
                     "OpenAI response: in=%d out=%d cost=$%.4f budget_left=$%.4f",
                     in_tok,
