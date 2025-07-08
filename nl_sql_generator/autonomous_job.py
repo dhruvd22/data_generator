@@ -29,6 +29,7 @@ from .openai_responses import ResponsesClient
 from .sql_validator import SQLValidator
 from .critic import Critic
 from .writer import ResultWriter
+from .schema_loader import SchemaLoader, TableInfo
 from .logger import log_call
 import logging
 
@@ -166,6 +167,20 @@ class AutonomousJob:
                 },
             },
         ]
+
+    def _extract_tables(self, text: str) -> list[str]:
+        """Return list of schema tables mentioned in ``text``."""
+        lower = (text or "").lower()
+        return [t for t in self.schema if t.lower() in lower]
+
+    def _schema_subset_json(self, tables: list[str]) -> dict:
+        """Return JSON-serialisable subset of ``self.schema``."""
+        subset = {t: self.schema[t] for t in tables if t in self.schema}
+        log.debug("Creating schema subset for tables: %s", list(subset))
+        example = next(iter(subset.values()), None)
+        if example is not None and isinstance(example, TableInfo):
+            return SchemaLoader.to_json(subset)
+        return subset
 
     async def _run_schema_docs_async(self, task: NLTask) -> JobResult:
         """Generate NL⇄schema documentation pairs using worker agents."""
@@ -480,13 +495,15 @@ class AutonomousJob:
                             for pair in res.rows:
                                 key = pair.get("sql")
                                 if key not in dedup[path]:
-                                    self.writer.append_jsonl(
-                                        {
-                                            "question": pair.get("question", ""),
-                                            "sql": _clean_sql(pair.get("sql", "")),
-                                        },
-                                        path,
-                                    )
+                                    row = {
+                                        "question": pair.get("question", ""),
+                                        "sql": _clean_sql(pair.get("sql", "")),
+                                    }
+                                    if t.get("metadata", {}).get("tag_schema_json"):
+                                        tables = self._extract_tables(row["sql"])
+                                        log.info("Tagging schema for tables: %s", tables)
+                                        row["schema"] = self._schema_subset_json(tables)
+                                    self.writer.append_jsonl(row, path)
                                     dedup[path].add(key)
                             log.info("Wrote %s pairs to %s", phase, path)
                         else:
@@ -498,10 +515,12 @@ class AutonomousJob:
                                 else:
                                     key = (res.question, res.sql)
                                 if key not in dedup[path]:
-                                    self.writer.append_jsonl(
-                                        {"question": res.question, "sql": res.sql},
-                                        path,
-                                    )
+                                    row = {"question": res.question, "sql": res.sql}
+                                    if t.get("metadata", {}).get("tag_schema_json"):
+                                        tables = self._extract_tables(res.sql)
+                                        log.info("Tagging schema for tables: %s", tables)
+                                        row["schema"] = self._schema_subset_json(tables)
+                                    self.writer.append_jsonl(row, path)
                                     dedup[path].add(key)
                                     log.info("Wrote dataset entry to %s", path)
                                 else:
