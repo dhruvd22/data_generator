@@ -493,14 +493,18 @@ class AutonomousJob:
                             log.info("Wrote schema QA pairs to %s", path)
                         elif phase in {"single_table", "joins"} and res.rows:
                             for pair in res.rows:
-                                key = pair.get("sql")
+                                sql = _clean_sql(pair.get("sql", ""))
+                                if sql == "FAIL":
+                                    log.info("Skipping failed pair for %s", path)
+                                    continue
+                                key = sql
                                 if key not in dedup[path]:
                                     row = {
                                         "question": pair.get("question", ""),
-                                        "sql": _clean_sql(pair.get("sql", "")),
+                                        "sql": sql,
                                     }
                                     if t.get("metadata", {}).get("tag_schema_json"):
-                                        tables = self._extract_tables(row["sql"])
+                                        tables = self._extract_tables(sql)
                                         log.info("Tagging schema for tables: %s", tables)
                                         row["schema"] = self._schema_subset_json(tables)
                                     self.writer.append_jsonl(row, path)
