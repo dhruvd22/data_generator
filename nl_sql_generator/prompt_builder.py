@@ -30,12 +30,16 @@ def _schema_as_markdown(schema: Dict[str, Any]) -> str:
 
 
 def load_template_messages(
-    template_name: str, schema: Dict[str, Any], nl_question: str
+    template_name: str,
+    schema: Dict[str, Any],
+    nl_question: str,
+    extra: Dict[str, Any] | None = None,
 ) -> List[Dict[str, str]]:
     """Return chat messages rendered from ``template_name``.
 
     The template should contain blocks starting with ``### role: <role>``.
     Supported placeholders include ``{{schema_json}}`` and ``{{nl_question}}``.
+    Additional keys from ``extra`` may also be used as ``{{key}}``.
     """
 
     path = os.path.join(os.path.dirname(__file__), "prompt_template", template_name)
@@ -52,6 +56,11 @@ def load_template_messages(
         "schema_json": json.dumps(schema, indent=2),
         "nl_question": nl_question,
     }
+    if extra:
+        for k, v in extra.items():
+            if not isinstance(v, str):
+                v = json.dumps(v, indent=2)
+            replacements[k] = v
     for key, val in replacements.items():
         text = text.replace(f"{{{{{key}}}}}", val)
 
@@ -98,7 +107,13 @@ def build_prompt(
     """
     template_name = phase_cfg.get("prompt_template")
     if template_name:
-        return load_template_messages(template_name, schema, nl_question)
+        extra = {}
+        builtin = phase_cfg.get("builtins", [None])[0]
+        if builtin:
+            extra["builtin"] = builtin
+        if "sample_rows" in phase_cfg:
+            extra["sample_rows"] = phase_cfg["sample_rows"]
+        return load_template_messages(template_name, schema, nl_question, extra)
 
     # Few-shot examples first (if any)
     example_block = ""
@@ -110,7 +125,11 @@ def build_prompt(
         example_block = "\n\n".join(example_lines) + "\n\n"
 
     required_fn = phase_cfg.get("builtins", [None])[0]  # e.g., COUNT
-    fn_clause = f"Ensure the SQL **includes** the function `{required_fn}`." if required_fn else ""
+    fn_clause = (
+        f"Ensure the SQL **includes** the function `{required_fn}`."
+        if required_fn
+        else ""
+    )
 
     prompt = dedent(
         f"""
