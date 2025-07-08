@@ -201,6 +201,38 @@ class AutonomousJob:
         )
         return JobResult(task.get("question", ""), "", pairs)
 
+    async def _run_single_table_async(self, task: NLTask) -> JobResult:
+        """Generate multiple NL/SQL pairs for a single table."""
+
+        from .worker_agent import _parse_pairs
+        table = task.get("metadata", {}).get("table")
+        if not table or table not in self.schema:
+            return JobResult(task.get("question", ""), "", [])
+
+        k = int(task.get("metadata", {}).get("count", 1))
+        subset = {table: self.schema[table]}
+        extra = {"table": table, "count": k}
+        if self.phase_cfg.get("use_sample_rows"):
+            n = int(self.phase_cfg.get("n_rows", 5))
+            try:
+                rows = self.writer.fetch(f"SELECT * FROM {table} LIMIT {n}", n)
+                extra["sample_rows"] = {table: rows}
+            except Exception as err:
+                log.warning("Failed fetching sample rows for %s: %s", table, err)
+
+        messages = build_prompt(task.get("question", ""), subset, {**self.phase_cfg, **extra})
+        if not isinstance(messages, list):
+            messages = [
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": messages},
+            ]
+        text = await self.client.acomplete(messages)
+        pairs = _parse_pairs(text)
+        for p in pairs:
+            if "sql" in p:
+                p["sql"] = _clean_sql(p["sql"])
+        return JobResult(task.get("question", ""), "", pairs)
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -281,6 +313,8 @@ class AutonomousJob:
             return await self._run_schema_docs_async(task)
         if task.get("phase") == "schema_relationship":
             return await self._run_schema_relationship_async(task)
+        if task.get("phase") == "single_table" and task.get("metadata", {}).get("count"):
+            return await self._run_single_table_async(task)
 
         base_content = (
             "You are a data-engineer agent. "
@@ -394,10 +428,11 @@ class AutonomousJob:
                             cleared.add(path)
                         if path not in dedup:
                             dedup[path] = set()
-                        if t.get("phase") in {"schema_docs", "schema_relationship"}:
+                        phase = t.get("phase")
+                        if phase in {"schema_docs", "schema_relationship"}:
                             for pair in res.rows:
                                 if (
-                                    t.get("phase") == "schema_relationship"
+                                    phase == "schema_relationship"
                                     and "confidence" in pair
                                 ):
                                     pair = {
@@ -410,11 +445,24 @@ class AutonomousJob:
                                     self.writer.append_jsonl(pair, path)
                                     dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
+                        elif phase == "single_table" and res.rows:
+                            for pair in res.rows:
+                                key = pair.get("sql")
+                                if key not in dedup[path]:
+                                    self.writer.append_jsonl(
+                                        {
+                                            "question": pair.get("question", ""),
+                                            "sql": _clean_sql(pair.get("sql", "")),
+                                        },
+                                        path,
+                                    )
+                                    dedup[path].add(key)
+                            log.info("Wrote single table pairs to %s", path)
                         else:
                             if res.sql == "FAIL":
                                 log.info("Skipping failed pair for %s", path)
                             else:
-                                if t.get("phase") == "single_table":
+                                if phase == "single_table":
                                     key = res.sql
                                 else:
                                     key = (res.question, res.sql)

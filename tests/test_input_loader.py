@@ -169,7 +169,9 @@ phases:
     schema = {"a": object(), "b": object()}
     tasks = load_tasks(str(path), schema)
 
-    # two tables * count 2 each
-    assert len(tasks) == 4
+    # one task per table with count metadata
+    assert len(tasks) == 2
     assert {t["metadata"]["table"] for t in tasks} == {"a", "b"}
+    assert all(t["metadata"]["count"] == 2 for t in tasks)
+    assert all(t["metadata"]["parallelism"] == 2 for t in tasks)
     assert all(t["metadata"]["prompt_template"] == "single_table_sql_template.txt" for t in tasks)
