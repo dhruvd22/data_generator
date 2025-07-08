@@ -21,7 +21,7 @@ except Exception:  # pragma: no cover - optional dependency
     openai = None
 
 from .schema_loader import TableInfo, SchemaLoader
-from .openai_responses import acomplete
+from .openai_responses import acomplete, _load_budget
 
 __all__ = ["discover_relationships"]
 
@@ -186,7 +186,7 @@ async def _gpt_second_opinion(
 ) -> str:
     """Ask GPT to confirm a relationship and return its verdict."""
 
-    budget = float(os.getenv("OPENAI_BUDGET_USD", "0"))
+    budget = _load_budget()
     if openai is None or os.getenv("OPENAI_API_KEY") is None or budget <= 0:
         return "yes"
 
