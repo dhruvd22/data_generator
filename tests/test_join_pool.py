@@ -38,3 +38,20 @@ def test_join_pool_passes_sample_rows(monkeypatch):
     # config passed to worker should include sample_rows
     assert "sample_rows" in DummyWorker.last_cfg
     assert set(DummyWorker.last_cfg["sample_rows"].keys()) == {"a", "b"}
+
+
+def test_join_pool_cleans_sql(monkeypatch):
+    class Worker(DummyWorker):
+        async def generate(self, batch_size):
+            return [
+                {"question": "Q1", "sql": "SELECT * FROM a;"},
+                {"question": "Q2", "sql": "SELECT * FROM b ;"},
+            ]
+
+    schema = {"a": {}, "b": {}}
+    writer = DummyWriter()
+    client = DummyClient()
+    monkeypatch.setattr("nl_sql_generator.join_pool.JoinWorker", Worker)
+    pool = JoinPool(schema, {"parallelism": 1, "count": 2}, object, writer, None, client)
+    result = asyncio.run(pool.generate())
+    assert sorted(p["sql"] for p in result) == ["SELECT * FROM a", "SELECT * FROM b"]
