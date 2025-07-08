@@ -329,8 +329,13 @@ async def discover_relationships(
         sql = f"SELECT 1 FROM {ftbl} a JOIN {rtbl} b ON a.{fcol.name} = b.{pk} LIMIT 1"
         validator_ok = True
         if validator:
-            validator_ok, _ = await asyncio.to_thread(validator.check, sql)
-            log.info("Validation of relationship SQL '%s': %s", sql, validator_ok)
+            try:
+                validator_ok, _ = await asyncio.to_thread(validator.check, sql)
+            except Exception as err:  # pragma: no cover - unexpected errors
+                log.exception("Validation check failed: %s", err)
+                validator_ok = False
+            else:
+                log.info("Validation of relationship SQL '%s': %s", sql, validator_ok)
         else:
             log.info("Validation skipped for SQL '%s'", sql)
         if not validator_ok:
