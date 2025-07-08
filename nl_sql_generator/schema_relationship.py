@@ -23,7 +23,7 @@ __all__ = ["discover_relationships"]
 log = logging.getLogger(__name__)
 
 # minimum heuristic votes required for GPT confirmation
-THRESHOLD = 4
+THRESHOLD = 3
 
 # ----------------------------------------------------------------------
 # helper functions
@@ -85,6 +85,14 @@ async def _value_overlap(
     """Return the ratio of values from ``t_from.c_from`` found in ``t_to.c_to``."""
 
     def _run() -> float:
+        log.debug(
+            "Checking value overlap %s.%s -> %s.%s (limit=%d)",
+            t_from,
+            c_from,
+            t_to,
+            c_to,
+            limit,
+        )
         with engine.connect() as conn:
             q1 = text(
                 f"SELECT DISTINCT {c_from} FROM {t_from} "
@@ -111,7 +119,9 @@ async def _values_contained(
     engine, t_from: str, c_from: str, t_to: str, c_to: str, limit: int
 ) -> bool:
     """Return ``True`` if sampled values from ``t_from.c_from`` mostly appear in ``t_to.c_to``."""
-
+    log.debug(
+        "Checking values contained %s.%s -> %s.%s", t_from, c_from, t_to, c_to
+    )
     ratio = await _value_overlap(engine, t_from, c_from, t_to, c_to, limit)
     return ratio >= 0.95
 
@@ -120,6 +130,11 @@ async def _distinct_ratio(engine, table: str, column: str) -> float:
     """Return ``COUNT(DISTINCT column) / COUNT(*)`` for ``table``."""
 
     def _run() -> float:
+        log.debug(
+            "Checking distinct ratio for %s.%s",
+            table,
+            column,
+        )
         with engine.connect() as conn:
             q = text(
                 f"SELECT COUNT(DISTINCT {column})::FLOAT / NULLIF(COUNT(*), 0) " f"FROM {table}"
@@ -138,6 +153,13 @@ async def _no_orphans(engine, child: str, child_col: str, parent: str, parent_pk
     """Return ``True`` if every ``child.child_col`` value exists in ``parent``."""
 
     def _run() -> bool:
+        log.debug(
+            "Checking orphan rows from %s.%s -> %s.%s",
+            child,
+            child_col,
+            parent,
+            parent_pk,
+        )
         with engine.connect() as conn:
             q = text(
                 f"SELECT COUNT(*) = 0 AS ok FROM {child} c "
@@ -188,7 +210,10 @@ async def _gpt_second_opinion(child: str, col: str, parent: str, pk: str, score:
 
 
 async def discover_relationships(
-    schema: Dict[str, TableInfo], engine, sample_limit: int = 5000
+    schema: Dict[str, TableInfo],
+    engine,
+    sample_limit: int = 5000,
+    parallelism: int = 4,
 ) -> List[Dict[str, Any]]:
     """Return discovered relationships sorted by confidence."""
     log.info("Starting relationship discovery with sample_limit=%d", sample_limit)
@@ -231,69 +256,87 @@ async def discover_relationships(
             type_map[key] = col.type_
             comment_map[key] = col.comment
 
-    log.info("Discovering relationships using heuristics")
+    log.info(
+        "Discovering relationships using heuristics with parallelism=%d",
+        parallelism,
+    )
+    sem = asyncio.Semaphore(max(1, parallelism))
+    lock = asyncio.Lock()
+
+    async def _process(ftbl: str, fcol, rtbl: str, pk: str) -> None:
+        ftype = type_map[(ftbl, fcol.name)]
+        fcomment = (comment_map[(ftbl, fcol.name)] or "").lower()
+        rtype = type_map[(rtbl, pk)]
+
+        s1 = (
+            max(
+                _name_similarity(fcol.name, pk),
+                _name_similarity(fcol.name, f"{rtbl}_{pk}"),
+                _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{pk}"),
+            )
+            >= 0.8
+        )
+        s2 = _same_type(ftype, rtype)
+        mention_target = rtbl.lower().rstrip("s")
+        s3 = mention_target in fcomment
+
+        async with sem:
+            s4_task = asyncio.create_task(
+                _values_contained(engine, ftbl, fcol.name, rtbl, pk, sample_limit)
+            )
+            ratio_task = asyncio.create_task(_distinct_ratio(engine, ftbl, fcol.name))
+            s4, ratio = await asyncio.gather(s4_task, ratio_task)
+        s5 = ratio < 0.8
+        s6 = fcol.name.lower() != "id"
+
+        score = sum([s1, s2, s3, s4, s5, s6])
+        log.debug(
+            "%s.%s -> %s.%s signals: %s score=%d",
+            ftbl,
+            fcol.name,
+            rtbl,
+            pk,
+            [s1, s2, s3, s4, s5, s6],
+            score,
+        )
+
+        if score < THRESHOLD:
+            return
+
+        gpt = await _gpt_second_opinion(ftbl, fcol.name, rtbl, pk, score)
+        if gpt != "yes":
+            return
+
+        async with sem:
+            ok = await _no_orphans(engine, ftbl, fcol.name, rtbl, pk)
+        if not ok:
+            return
+
+        rel = f"{ftbl}.{fcol.name} -> {rtbl}.{pk}"
+        async with lock:
+            if rel in seen:
+                return
+            seen.add(rel)
+            results.append(
+                {
+                    "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{pk}?",
+                    "relationship": rel,
+                    "confidence": score / 6,
+                }
+            )
+
+    tasks = []
     for ftbl, finfo in schema.items():
         for fcol in finfo.columns:
-            ftype = type_map[(ftbl, fcol.name)]
-            fcomment = (comment_map[(ftbl, fcol.name)] or "").lower()
             for rtbl, rinfo in schema.items():
                 if ftbl == rtbl:
                     continue
                 pk = rinfo.primary_key
                 if not pk:
                     continue
-                rtype = type_map[(rtbl, pk)]
+                tasks.append(_process(ftbl, fcol, rtbl, pk))
 
-                # --- heuristic signals
-                s1 = (
-                    max(
-                        _name_similarity(fcol.name, pk),
-                        _name_similarity(fcol.name, f"{rtbl}_{pk}"),
-                        _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{pk}"),
-                    )
-                    >= 0.8
-                )
-                s2 = _same_type(ftype, rtype)
-                mention_target = rtbl.lower().rstrip("s")
-                s3 = mention_target in fcomment
-                s4 = await _values_contained(engine, ftbl, fcol.name, rtbl, pk, sample_limit)
-                ratio = await _distinct_ratio(engine, ftbl, fcol.name)
-                s5 = ratio < 0.8
-                s6 = fcol.name.lower() != "id"
-
-                score = sum([s1, s2, s3, s4, s5, s6])
-                log.debug(
-                    "%s.%s -> %s.%s signals: %s score=%d",
-                    ftbl,
-                    fcol.name,
-                    rtbl,
-                    pk,
-                    [s1, s2, s3, s4, s5, s6],
-                    score,
-                )
-
-                if score < THRESHOLD:
-                    continue
-
-                gpt = await _gpt_second_opinion(ftbl, fcol.name, rtbl, pk, score)
-                if gpt != "yes":
-                    continue
-
-                if not await _no_orphans(engine, ftbl, fcol.name, rtbl, pk):
-                    continue
-
-                rel = f"{ftbl}.{fcol.name} -> {rtbl}.{pk}"
-                if rel in seen:
-                    continue
-                seen.add(rel)
-                results.append(
-                    {
-                        "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{pk}?",
-                        "relationship": rel,
-                        "confidence": score / 6,
-                    }
-                )
-
+    await asyncio.gather(*tasks)
     results.sort(key=lambda r: r["confidence"], reverse=True)
     log.info("Discovered %d relationships", len(results))
     return results

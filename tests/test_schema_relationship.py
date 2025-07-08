@@ -48,7 +48,9 @@ def test_fk_relationship(monkeypatch):
     monkeypatch.setattr(
         "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
     )
-    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._values_contained", _always_contained
+    )
 
     async def _ratio(*args, **kwargs):
         return 0.5
@@ -115,7 +117,12 @@ def test_distinct_ratio_called(monkeypatch):
 def test_reject_low_similarity(monkeypatch):
     inspector = DummyInspector()
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
-    monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
+    async def _never_contained(*args, **kwargs):
+        return False
+
+    monkeypatch.setattr(
+        "nl_sql_generator.schema_relationship._values_contained", _never_contained
+    )
 
     async def _ratio3(*args, **kwargs):
         return 1.0

@@ -10,8 +10,11 @@ Example:
 """
 
 __all__ = ["SQLValidator"]
-from sqlalchemy import text, create_engine
+import logging
 import os
+from sqlalchemy import create_engine, text
+
+log = logging.getLogger(__name__)
 
 
 class SQLValidator:
@@ -36,9 +39,12 @@ class SQLValidator:
 
     def check(self, sql: str) -> tuple[bool, str | None]:
         """Return ``(is_valid, error_msg)`` for the given SQL."""
+        log.info("Validating SQL via EXPLAIN: %s", sql)
         try:
             with self.eng.connect() as conn:
                 conn.execute(text(f"EXPLAIN {sql}"))
+            log.debug("SQL validation succeeded")
             return True, None
         except Exception as err:  # broad on purpose
+            log.warning("SQL validation failed: %s", err)
             return False, str(err)
