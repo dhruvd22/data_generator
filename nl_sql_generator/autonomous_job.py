@@ -108,6 +108,7 @@ class AutonomousJob:
         self.validator = validator or SQLValidator()
         self.critic = critic or Critic(client=self.client)
         self.writer = writer or ResultWriter()
+        self._write_lock = asyncio.Lock()
 
         self._tool_map: Dict[str, Callable[..., Any]] = {
             "generate_sql": self._tool_generate_sql,
@@ -206,7 +207,24 @@ class AutonomousJob:
     @log_call
     async def _tool_generate_sql(self, nl_question: str) -> str:
         """LLM tool: generate SQL for ``nl_question``."""
-        prompt_obj = build_prompt(nl_question, self.schema, self.phase_cfg)
+        def _detect_tables(question: str) -> list[str]:
+            lower = question.lower()
+            return [t for t in self.schema if t.lower() in lower]
+
+        tables = _detect_tables(nl_question)
+        subset = {t: self.schema[t] for t in tables} if tables else self.schema
+        cfg = dict(self.phase_cfg)
+        if cfg.get("use_sample_rows") and tables:
+            n = int(cfg.get("n_rows", 5))
+            rows: dict[str, list[dict]] = {}
+            for t in tables:
+                try:
+                    rows[t] = self.writer.fetch(f"SELECT * FROM {t} LIMIT {n}", n)
+                except Exception as err:
+                    log.warning("Failed fetching sample rows for %s: %s", t, err)
+            if rows:
+                cfg["sample_rows"] = rows
+        prompt_obj = build_prompt(nl_question, subset, cfg)
         log.info("Generating SQL for question: %s", nl_question)
         if isinstance(prompt_obj, list):
             messages = prompt_obj
@@ -328,14 +346,62 @@ class AutonomousJob:
             result = JobResult(task["question"], sql, data.get("rows", []))
             ok, err = self.validator.check(result.sql)
             if not ok:
-                raise RuntimeError(f"SQL validation failed: {err}")
+                log.warning("SQL validation failed: %s", err)
+                result.sql = "FAIL"
+                result.rows = []
             return result
+
+    @log_call
+    async def _run_tasks_async(
+        self, tasks: List[NLTask], run_version: str | None, parallelism: int
+    ) -> List[JobResult]:
+        """Process many tasks concurrently."""
+
+        results: list[JobResult | None] = [None] * len(tasks)
+        cleared: set[str] = set()
+        sem = asyncio.Semaphore(max(parallelism, 1))
+
+        async def _runner(idx: int, t: NLTask) -> None:
+            async with sem:
+                total = len(tasks)
+                log.info("Running task %d/%d: %s", idx + 1, total, t.get("question"))
+                res = await self.run_task(t)
+                results[idx] = res
+
+                out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
+                if out_dir:
+                    file_name = "dataset.jsonl"
+                    if run_version:
+                        file_name = f"dataset_{run_version}.jsonl"
+                    path = os.path.join(out_dir, file_name)
+                    async with self._write_lock:
+                        if path not in cleared:
+                            os.makedirs(out_dir, exist_ok=True)
+                            open(path, "w").close()
+                            cleared.add(path)
+                        if t.get("phase") in {"schema_docs", "schema_relationship"}:
+                            for pair in res.rows:
+                                if (
+                                    t.get("phase") == "schema_relationship"
+                                    and "confidence" in pair
+                                ):
+                                    pair = {k: v for k, v in pair.items() if k != "confidence"}
+                                self.writer.append_jsonl(pair, path)
+                            log.info("Wrote schema QA pairs to %s", path)
+                        else:
+                            self.writer.append_jsonl(
+                                {"question": res.question, "sql": res.sql}, path
+                            )
+                            log.info("Wrote dataset entry to %s", path)
+
+        await asyncio.gather(*[_runner(i, t) for i, t in enumerate(tasks)])
+        return [r for r in results if r is not None]
 
     @log_call
     def run_tasks(
         self, tasks: List[NLTask], run_version: str | None = None
     ) -> List[JobResult]:
-        """Process many tasks synchronously.
+        """Public wrapper around the async task runner.
 
         Args:
             tasks: Sequence of tasks to run.
@@ -345,37 +411,8 @@ class AutonomousJob:
             List of :class:`JobResult` objects in the same order.
         """
 
-        results = []
-        total = len(tasks)
-        cleared: set[str] = set()
-        for idx, t in enumerate(tasks, 1):
-            log.info("Running task %d/%d: %s", idx, total, t.get("question"))
-            res = asyncio.run(self.run_task(t))
-            results.append(res)
+        if not tasks:
+            return []
 
-            out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
-            if out_dir:
-                file_name = "dataset.jsonl"
-                if run_version:
-                    file_name = f"dataset_{run_version}.jsonl"
-                path = os.path.join(out_dir, file_name)
-                if path not in cleared:
-                    os.makedirs(out_dir, exist_ok=True)
-                    open(path, "w").close()
-                    cleared.add(path)
-                if t.get("phase") in {"schema_docs", "schema_relationship"}:
-                    for pair in res.rows:
-                        if (
-                            t.get("phase") == "schema_relationship"
-                            and "confidence" in pair
-                        ):
-                            pair = {k: v for k, v in pair.items() if k != "confidence"}
-                        self.writer.append_jsonl(pair, path)
-                    log.info("Wrote schema QA pairs to %s", path)
-                else:
-                    self.writer.append_jsonl(
-                        {"question": res.question, "sql": res.sql},
-                        path,
-                    )
-                    log.info("Wrote dataset entry to %s", path)
-        return results
+        parallelism = int(tasks[0].get("metadata", {}).get("parallelism", 1))
+        return asyncio.run(self._run_tasks_async(tasks, run_version, parallelism))

@@ -1,8 +1,11 @@
 ### role: system
-You are a PostgreSQL expert. Given the database schema in JSON format, generate a SQL query answering the user's question. Ensure the query uses the `{{builtin}}` function. You may call the `writer` tool to inspect sample rows if needed. Return only the SQL.
+You are a PostgreSQL expert. Given the database schema in JSON format, generate a SQL query answering the user's question. Ensure the query uses the `{{builtin}}` function. Use the sample rows to understand the columns. Return only the SQL.
 
 ### role: user
 SCHEMA_JSON:
 {{schema_json}}
+
+SAMPLE_ROWS:
+{{sample_rows}}
 
 {{nl_question}}
