@@ -24,7 +24,6 @@ phases:
 
   - name: joins
     count: 25
-    examples_file: fewshot/multi_table_examples.yaml
     use_sample_rows: false
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
