@@ -70,7 +70,8 @@ class SchemaLoader:
         Raises:
             ValueError: If no database URL is provided.
         """
-        db_url = db_url or os.getenv("DATABASE_URL")
+        # Trim whitespace so extraneous newlines don't break authentication
+        db_url = (db_url or os.getenv("DATABASE_URL", "")).strip()
         if not db_url:
             raise ValueError("Provide DATABASE_URL env var or param")
 

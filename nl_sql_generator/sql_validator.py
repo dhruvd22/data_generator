@@ -30,7 +30,9 @@ class SQLValidator:
             ValueError: If no database URL is provided.
         """
 
-        self.db_url = db_url or os.getenv("DATABASE_URL")
+        # Strip whitespace to avoid connection issues when env vars contain
+        # trailing newlines or spaces.
+        self.db_url = (db_url or os.getenv("DATABASE_URL", "")).strip()
         if not self.db_url:
             raise ValueError("DATABASE_URL not set")
         self.eng = create_engine(
