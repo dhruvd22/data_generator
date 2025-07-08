@@ -186,7 +186,8 @@ async def _gpt_second_opinion(
 ) -> str:
     """Ask GPT to confirm a relationship and return its verdict."""
 
-    if openai is None or os.getenv("OPENAI_API_KEY") is None:
+    budget = float(os.getenv("OPENAI_BUDGET_USD", "0"))
+    if openai is None or os.getenv("OPENAI_API_KEY") is None or budget <= 0:
         return "yes"
 
     system = "You are a database expert. Reply with 'yes', 'no' or 'unsure'."
@@ -195,24 +196,19 @@ async def _gpt_second_opinion(
         f"Heuristic vote: {score}/6. Is this a foreign key relationship?"
     )
 
-    def _call() -> str:
-        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        resp = client.chat.completions.create(
-            model="gpt-4.1",
-            messages=[
+    try:
+        response = await acomplete(
+            [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user},
-            ],
-            max_tokens=1,
-            temperature=0,
+            ]
         )
-        return resp.choices[0].message.content.strip().lower()
-
-    try:
-        return await asyncio.to_thread(_call)
     except Exception as err:  # pragma: no cover - network failures
         log.warning("GPT opinion failed: %s", err)
         return "unsure"
+
+    verdict = response.strip().lower()
+    return verdict if verdict in {"yes", "no", "unsure"} else "unsure"
 
 
 async def _gpt_relationship_sqls(
@@ -262,13 +258,13 @@ async def _gpt_relationship_sqls(
 
     log.info("Requesting GPT relationship suggestions")
     try:
-        text = await acomplete(prompt)
+        response_text = await acomplete(prompt)
     except Exception as err:  # pragma: no cover - network failures
         log.warning("GPT relationship discovery failed: %s", err)
         return []
 
     sqls: List[str] = []
-    for line in text.splitlines():
+    for line in response_text.splitlines():
         line = line.strip().lstrip("-*0123456789. ").strip("`")
         if not line:
             continue
