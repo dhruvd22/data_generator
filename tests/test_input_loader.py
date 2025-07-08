@@ -175,3 +175,20 @@ phases:
     assert all(t["metadata"]["count"] == 2 for t in tasks)
     assert all(t["metadata"]["parallelism"] == 2 for t in tasks)
     assert all(t["metadata"]["prompt_template"] == "single_table_sql_template.txt" for t in tasks)
+
+
+def test_joins_phase(tmp_path):
+    cfg = """
+phases:
+  - name: joins
+    count: 5
+    min_joins: 3
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"a": object(), "b": object()})
+    assert len(tasks) == 1
+    meta = tasks[0]["metadata"]
+    assert meta["count"] == 5
+    assert meta["min_joins"] == 3
