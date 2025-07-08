@@ -249,7 +249,7 @@ class AutonomousJob:
         """Generate NL/SQL pairs that join multiple tables."""
 
         from .join_pool import JoinPool
-        from .validator import SQLValidator as ValCls
+        from .sql_validator import SQLValidator as ValCls
 
         pool = JoinPool(
             self.schema,
