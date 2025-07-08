@@ -2,10 +2,12 @@
 
 import asyncio
 import math
-import random
 import itertools
 import logging
+import json
 from typing import Any, Dict, List
+
+from .prompt_builder import load_template_messages
 
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
@@ -13,7 +15,15 @@ from .autonomous_job import _clean_sql
 
 
 class JoinPool:
-    def __init__(self, schema: Dict[str, Any], phase_cfg: Dict[str, Any], validator_cls, writer, critic, client: ResponsesClient) -> None:
+    def __init__(
+        self,
+        schema: Dict[str, Any],
+        phase_cfg: Dict[str, Any],
+        validator_cls,
+        writer,
+        critic,
+        client: ResponsesClient,
+    ) -> None:
         self.schema = schema
         self.cfg = phase_cfg
         self.validator_cls = validator_cls
@@ -24,33 +34,90 @@ class JoinPool:
         self.lock = asyncio.Lock()
         self.log = logging.getLogger(__name__)
 
-    def _schema_chunks(self) -> List[Dict[str, Any]]:
+    async def _schema_chunks(self) -> List[Dict[str, Any]]:
+        """Return table subsets for each worker using GPT suggestions."""
+
         n = int(self.cfg.get("parallelism", 1))
         min_joins = int(self.cfg.get("min_joins", 2))
-        table_names = list(self.schema.keys())
-        if not table_names:
-            return [self.schema]
-        chunks: List[Dict[str, Any]] = []
-        for _ in range(min(n, len(table_names))):
-            k = min(len(table_names), max(min_joins, 2))
-            chosen = random.sample(table_names, k=k)
-            chunks.append({t: self.schema[t] for t in chosen})
+        extra = {"count": n, "min_joins": min_joins}
+        self.log.info("Requesting %d joinable table sets", n)
+        try:
+            messages = load_template_messages(
+                "join_set_template.txt", self.schema, "", extra
+            )
+            text = await self.client.acomplete(messages)
+        except Exception as err:  # pragma: no cover - network failures
+            self.log.warning("Failed requesting table sets: %s", err)
+            text = ""
+
+        sets: List[List[str]] = []
+        for line in text.splitlines():
+            line = line.strip().lstrip("-*0123456789. ").strip("`")
+            if not line:
+                continue
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                tbls = obj.get("tables")
+            else:
+                tbls = obj
+            if not isinstance(tbls, list):
+                continue
+            tbls = [t for t in tbls if t in self.schema]
+            if len(tbls) >= min_joins:
+                sets.append(tbls)
+
+        if not sets:
+            # fallback to using all tables if GPT gave nothing
+            sets = [list(self.schema.keys())]
+
+        chunks = [{t: self.schema[t] for t in tbls} for tbls in sets[:n]]
+        self.log.info("GPT suggested table sets: %s", sets[:n])
         return chunks
 
-    async def _run_worker(self, batch_size: int, worker_id: int, schema_subset: Dict[str, Any]) -> int:
+    async def _run_worker(
+        self, batch_size: int, worker_id: int, schema_subset: Dict[str, Any]
+    ) -> int:
         cfg = dict(self.cfg)
         if cfg.get("use_sample_rows"):
             n_rows = int(cfg.get("n_rows", 5))
             sample_rows = {}
             for t in schema_subset:
                 try:
-                    sample_rows[t] = self.writer.fetch(f"SELECT * FROM {t} LIMIT {n_rows}", n_rows)
+                    sample_rows[t] = self.writer.fetch(
+                        f"SELECT * FROM {t} LIMIT {n_rows}", n_rows
+                    )
                 except Exception as err:
-                    self.log.warning("Worker %d failed fetching rows for %s: %s", worker_id, t, err)
+                    self.log.warning(
+                        "Worker %d failed fetching rows for %s: %s",
+                        worker_id,
+                        t,
+                        err,
+                    )
             if sample_rows:
                 cfg["sample_rows"] = sample_rows
-        self.log.info("Worker %d starting batch size %d", worker_id, batch_size)
-        agent = JoinWorker(schema_subset, cfg, self.validator_cls, self.critic, self.writer, worker_id, self.client)
+                self.log.info(
+                    "Worker %d loaded sample rows for %s",
+                    worker_id,
+                    list(sample_rows),
+                )
+        self.log.info(
+            "Worker %d starting batch size %d with tables %s",
+            worker_id,
+            batch_size,
+            list(schema_subset),
+        )
+        agent = JoinWorker(
+            schema_subset,
+            cfg,
+            self.validator_cls,
+            self.critic,
+            self.writer,
+            worker_id,
+            self.client,
+        )
         pairs = await agent.generate(batch_size)
         async with self.lock:
             before = len(self.seen)
@@ -62,8 +129,9 @@ class JoinPool:
 
     async def generate(self) -> List[Dict[str, str]]:
         goal = int(self.cfg.get("count", 1))
-        schema_chunks = self._schema_chunks()
+        schema_chunks = await self._schema_chunks()
         n_workers = len(schema_chunks)
+        self.log.info("Spawning %d workers", n_workers)
         k = math.ceil(goal / max(n_workers, 1))
         attempts = 0
         self.log.info(
@@ -76,7 +144,9 @@ class JoinPool:
             jobs = [self._run_worker(k, i, schema_chunks[i]) for i in range(n_workers)]
             await asyncio.gather(*jobs)
             attempts += 1
-            self.log.info("Attempt %d complete, total pairs=%d", attempts, len(self.seen))
+            self.log.info(
+                "Attempt %d complete, total pairs=%d", attempts, len(self.seen)
+            )
         self.log.info("Join generation finished with %d pairs", len(self.seen))
         return [
             {"question": q, "sql": _clean_sql(s)}
