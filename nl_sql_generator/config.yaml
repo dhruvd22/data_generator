@@ -23,7 +23,7 @@ phases:
     dataset_output_file_dir: generated_datasets/single_table
 
   - name: joins
-    count: 25
+    count: 2
     use_sample_rows: true
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
