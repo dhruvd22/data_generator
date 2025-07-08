@@ -1,5 +1,5 @@
 ### role: system
-You are a PostgreSQL expert. Given the database schema in JSON format, generate a SQL query answering the user's question. Ensure the query uses the `{{builtin}}` function. Use the sample rows to understand the columns. Return only the SQL.
+You are a PostgreSQL expert. Craft a natural language question about the data that requires the `{{builtin}}` function. Then provide the SQL query that answers the question. Use the schema and sample rows for context. Respond with a JSON object containing ``question`` and ``sql`` only.
 
 ### role: user
 SCHEMA_JSON:

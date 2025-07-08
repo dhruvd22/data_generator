@@ -205,8 +205,9 @@ class AutonomousJob:
     # internal helpers
     # ------------------------------------------------------------------
     @log_call
-    async def _tool_generate_sql(self, nl_question: str) -> str:
-        """LLM tool: generate SQL for ``nl_question``."""
+    async def _tool_generate_sql(self, nl_question: str) -> Dict[str, str]:
+        """LLM tool: generate SQL for ``nl_question`` and echo it back."""
+
         def _detect_tables(question: str) -> list[str]:
             lower = question.lower()
             return [t for t in self.schema if t.lower() in lower]
@@ -236,7 +237,7 @@ class AutonomousJob:
         sql = (await self.client.arun_jobs([messages]))[0]
         sql = sql.strip().strip("`")
         sql = re.sub(r"(?i)^sql\s*", "", sql)
-        return _clean_sql(sql)
+        return {"question": nl_question, "sql": _clean_sql(sql)}
 
     @log_call
     def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
@@ -281,15 +282,24 @@ class AutonomousJob:
         if task.get("phase") == "schema_relationship":
             return await self._run_schema_relationship_async(task)
 
+        base_content = (
+            "You are a data-engineer agent. "
+            "Here is the schema:\n"
+            f"{_schema_as_markdown(self.schema)}"
+        )
+        if task.get("phase") == "builtins":
+            base_content += (
+                " Return a JSON object with 'question' and 'sql'. "
+                "Come up with a question that demonstrates the given builtin function "
+                "and use the tools to generate the SQL."
+            )
+        else:
+            base_content += " Return a JSON object with only a 'sql' field containing the valid query."
+
         messages = [
             {
                 "role": "system",
-                "content": (
-                    "You are a data-engineer agent. "
-                    "Return a JSON object with only a 'sql' field containing the valid query. "
-                    "Here is the schema:\n"
-                    f"{_schema_as_markdown(self.schema)}"
-                ),
+                "content": base_content,
             },
             {
                 "role": "user",
@@ -343,7 +353,8 @@ class AutonomousJob:
             except Exception:
                 data = {"sql": content or "", "rows": []}
             sql = _clean_sql(data.get("sql", ""))
-            result = JobResult(task["question"], sql, data.get("rows", []))
+            question = data.get("question", task["question"])
+            result = JobResult(question, sql, data.get("rows", []))
             ok, err = self.validator.check(result.sql)
             if not ok:
                 log.warning("SQL validation failed: %s", err)
@@ -385,7 +396,11 @@ class AutonomousJob:
                                     t.get("phase") == "schema_relationship"
                                     and "confidence" in pair
                                 ):
-                                    pair = {k: v for k, v in pair.items() if k != "confidence"}
+                                    pair = {
+                                        k: v
+                                        for k, v in pair.items()
+                                        if k != "confidence"
+                                    }
                                 self.writer.append_jsonl(pair, path)
                             log.info("Wrote schema QA pairs to %s", path)
                         else:
