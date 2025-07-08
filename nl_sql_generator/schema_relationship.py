@@ -6,6 +6,8 @@ from typing import Dict, List, Any
 import asyncio
 import logging
 import os
+import json
+import re
 from difflib import SequenceMatcher
 
 import numpy as np
@@ -18,7 +20,8 @@ try:  # optional openai support
 except Exception:  # pragma: no cover - optional dependency
     openai = None
 
-from .schema_loader import TableInfo
+from .schema_loader import TableInfo, SchemaLoader
+from .openai_responses import acomplete
 
 __all__ = ["discover_relationships"]
 
@@ -137,7 +140,8 @@ async def _distinct_ratio(engine, table: str, column: str) -> float:
         )
         with engine.connect() as conn:
             q = text(
-                f"SELECT COUNT(DISTINCT {column})::FLOAT / NULLIF(COUNT(*), 0) " f"FROM {table}"
+                f"SELECT COUNT(DISTINCT {column})::FLOAT / NULLIF(COUNT(*), 0) "
+                f"FROM {table}"
             )
             val = conn.execute(q).scalar()
         return float(val or 0.0)
@@ -149,7 +153,9 @@ async def _distinct_ratio(engine, table: str, column: str) -> float:
         return 1.0
 
 
-async def _no_orphans(engine, child: str, child_col: str, parent: str, parent_pk: str) -> bool:
+async def _no_orphans(
+    engine, child: str, child_col: str, parent: str, parent_pk: str
+) -> bool:
     """Return ``True`` if every ``child.child_col`` value exists in ``parent``."""
 
     def _run() -> bool:
@@ -175,7 +181,9 @@ async def _no_orphans(engine, child: str, child_col: str, parent: str, parent_pk
         return False
 
 
-async def _gpt_second_opinion(child: str, col: str, parent: str, pk: str, score: int) -> str:
+async def _gpt_second_opinion(
+    child: str, col: str, parent: str, pk: str, score: int
+) -> str:
     """Ask GPT to confirm a relationship and return its verdict."""
 
     if openai is None or os.getenv("OPENAI_API_KEY") is None:
@@ -191,7 +199,10 @@ async def _gpt_second_opinion(child: str, col: str, parent: str, pk: str, score:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         resp = client.chat.completions.create(
             model="gpt-4.1",
-            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            messages=[
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
             max_tokens=1,
             temperature=0,
         )
@@ -202,6 +213,71 @@ async def _gpt_second_opinion(child: str, col: str, parent: str, pk: str, score:
     except Exception as err:  # pragma: no cover - network failures
         log.warning("GPT opinion failed: %s", err)
         return "unsure"
+
+
+async def _gpt_relationship_sqls(
+    schema: Dict[str, TableInfo], engine, n_rows: int = 2
+) -> List[str]:
+    """Return candidate relationship SQLs suggested by GPT."""
+    if openai is None or os.getenv("OPENAI_API_KEY") is None:
+        log.info("Skipping GPT relationship discovery")
+        return []
+
+    def _sample() -> Dict[str, list]:
+        data: Dict[str, list] = {}
+        with engine.connect() as conn:
+            for t in schema:
+                try:
+                    q = text(f"SELECT * FROM {t} LIMIT {n_rows}")
+                    rows = conn.execute(q).fetchall()
+                    data[t] = [
+                        dict(r._mapping) if hasattr(r, "_mapping") else dict(r)
+                        for r in rows
+                    ]
+                except Exception as err:  # pragma: no cover - DB errors
+                    log.warning("Sample rows failed for %s: %s", t, err)
+        return data
+
+    try:
+        rows = await asyncio.to_thread(_sample)
+    except Exception as err:  # pragma: no cover - DB errors
+        log.warning("Fetching sample rows failed: %s", err)
+        rows = {}
+
+    schema_json = SchemaLoader.to_json(schema)
+    prompt = [
+        {
+            "role": "system",
+            "content": (
+                "You are a database expert. Use the schema and sample rows to propose SQL "
+                "queries confirming foreign key relationships. "
+                "Return one SQL per line in the form: SELECT 1 FROM child a JOIN parent b ON a.col = b.pk LIMIT 1"
+            ),
+        },
+        {
+            "role": "user",
+            "content": f"SCHEMA_JSON:\n{json.dumps(schema_json, indent=2)}\n\nSAMPLE_ROWS:\n{json.dumps(rows, indent=2)}",
+        },
+    ]
+
+    log.info("Requesting GPT relationship suggestions")
+    try:
+        text = await acomplete(prompt)
+    except Exception as err:  # pragma: no cover - network failures
+        log.warning("GPT relationship discovery failed: %s", err)
+        return []
+
+    sqls: List[str] = []
+    for line in text.splitlines():
+        line = line.strip().lstrip("-*0123456789. ").strip("`")
+        if not line:
+            continue
+        line = line.rstrip(";").strip()
+        if line.lower().startswith("select"):
+            sqls.append(line)
+
+    log.info("GPT suggested %d candidate SQLs", len(sqls))
+    return sqls
 
 
 # ----------------------------------------------------------------------
@@ -366,6 +442,46 @@ async def discover_relationships(
                 tasks.append(_process(ftbl, fcol, rtbl, pk))
 
     await asyncio.gather(*tasks)
+
+    # ----------------------- step 3: GPT suggestions -------------------
+    log.info("Fetching additional relationships from GPT")
+    gpt_sqls = await _gpt_relationship_sqls(schema, engine)
+    pattern = re.compile(
+        r"SELECT\s+1\s+FROM\s+(\w+)\s+a\s+JOIN\s+(\w+)\s+b\s+ON\s+a\.(\w+)\s*=\s*b\.(\w+)",
+        re.IGNORECASE,
+    )
+    for sql in gpt_sqls:
+        validator_ok = True
+        if validator:
+            try:
+                validator_ok, _ = await asyncio.to_thread(validator.check, sql)
+            except Exception as err:  # pragma: no cover - unexpected errors
+                log.exception("Validation check failed: %s", err)
+                validator_ok = False
+            else:
+                log.info(
+                    "Validation of GPT relationship SQL '%s': %s", sql, validator_ok
+                )
+        else:
+            log.info("Validation skipped for SQL '%s'", sql)
+        if not validator_ok:
+            continue
+        m = pattern.search(sql)
+        if not m:
+            continue
+        child, parent, col, pk = m.groups()
+        rel = f"{child}.{col} -> {parent}.{pk}"
+        if rel in seen:
+            continue
+        seen.add(rel)
+        results.append(
+            {
+                "question": f"How is {child}.{col} related to {parent}.{pk}?",
+                "relationship": rel,
+                "confidence": 0.5,
+            }
+        )
+
     results.sort(key=lambda r: r["confidence"], reverse=True)
     log.info("Discovered %d relationships", len(results))
     return results
