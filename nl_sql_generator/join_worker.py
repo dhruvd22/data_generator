@@ -5,6 +5,7 @@ from typing import Any, Dict, List
 from .openai_responses import ResponsesClient
 from .prompt_builder import load_template_messages, _schema_as_markdown
 from .worker_agent import _parse_pairs
+from .autonomous_job import _clean_sql
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class JoinWorker:
         min_joins = int(self.cfg.get("min_joins", 2))
         for p in pairs:
             q = p.get("question", "")
-            sql = p.get("sql", "")
+            sql = _clean_sql(p.get("sql", ""))
             attempts = 0
             while attempts <= 2:
                 ok, err = self.validator.check(sql)
@@ -57,7 +58,7 @@ class JoinWorker:
                     sql = None
                     break
                 fix = await self.critic.areview(q, sql, _schema_as_markdown(self.schema))
-                sql = fix.get("fixed_sql", sql)
+                sql = _clean_sql(fix.get("fixed_sql", sql))
                 attempts += 1
             if sql and ok and self._join_table_count(sql) >= min_joins:
                 try:

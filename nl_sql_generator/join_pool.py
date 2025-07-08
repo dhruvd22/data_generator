@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
+from .autonomous_job import _clean_sql
 
 
 class JoinPool:
@@ -77,4 +78,7 @@ class JoinPool:
             attempts += 1
             self.log.info("Attempt %d complete, total pairs=%d", attempts, len(self.seen))
         self.log.info("Join generation finished with %d pairs", len(self.seen))
-        return [{"question": q, "sql": s} for q, s in itertools.islice(self.seen, goal)]
+        return [
+            {"question": q, "sql": _clean_sql(s)}
+            for q, s in itertools.islice(self.seen, goal)
+        ]
