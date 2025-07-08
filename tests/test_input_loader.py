@@ -154,3 +154,22 @@ phases:
     assert len(tasks) == 1
     assert tasks[0]["phase"] == "schema_relationship"
     assert tasks[0]["metadata"]["n_rows"] == 4
+
+
+def test_single_table_phase(tmp_path):
+    cfg = """
+phases:
+  - name: single_table
+    count: 2
+    prompt_template: single_table_sql_template.txt
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    schema = {"a": object(), "b": object()}
+    tasks = load_tasks(str(path), schema)
+
+    # two tables * count 2 each
+    assert len(tasks) == 4
+    assert {t["metadata"]["table"] for t in tasks} == {"a", "b"}
+    assert all(t["metadata"]["prompt_template"] == "single_table_sql_template.txt" for t in tasks)

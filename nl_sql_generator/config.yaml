@@ -19,6 +19,7 @@ phases:
   - name: single_table
     count: 30
     use_sample_rows: true
+    prompt_template: single_table_sql_template.txt
     dataset_output_file_dir: generated_datasets/single_table
 
   - name: joins
