@@ -3,6 +3,7 @@ import sys
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from nl_sql_generator.autonomous_job import AutonomousJob, JobResult
+from nl_sql_generator.schema_loader import TableInfo, ColumnInfo
 
 
 class DummyClient:
@@ -179,3 +180,31 @@ def test_joins_multiple_pairs(tmp_path):
         {"question": "JQ1", "sql": "JS1"},
         {"question": "JQ2", "sql": "JS2"},
     ]
+
+
+def test_tag_schema_json(tmp_path):
+    writer = DummyWriter()
+    schema = {
+        "users": TableInfo(
+            "users",
+            [ColumnInfo("id", "int"), ColumnInfo("name", "text")],
+            "id",
+        )
+    }
+    job = AutonomousJob(
+        schema, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult(t["question"], "SELECT * FROM users", [])
+
+    job.run_task = _rt
+    t = {
+        "phase": "demo",
+        "question": "foo?",
+        "metadata": {"dataset_output_file_dir": str(tmp_path), "tag_schema_json": True},
+    }
+    job.run_tasks([t])
+    row = writer.seen[0]
+    assert "schema" in row
+    assert "users" in row["schema"].get("tables", {})
