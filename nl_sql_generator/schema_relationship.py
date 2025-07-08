@@ -252,7 +252,7 @@ async def _gpt_relationship_sqls(
         },
         {
             "role": "user",
-            "content": f"SCHEMA_JSON:\n{json.dumps(schema_json, indent=2)}\n\nSAMPLE_ROWS:\n{json.dumps(rows, indent=2)}",
+            "content": f"SCHEMA_JSON:\n{json.dumps(schema_json, indent=2, default=str)}\n\nSAMPLE_ROWS:\n{json.dumps(rows, indent=2, default=str)}",
         },
     ]
 
