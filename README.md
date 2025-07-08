@@ -104,10 +104,10 @@ config.yaml ──▶ InputLoader ──▶ AutonomousJob
 ## Schema relationship phase
 
 This phase automatically discovers how tables relate to each other. It now logs
-each step and combines explicit foreign keys with heuristics based on column
-names, comments and sample row overlap. Column comments are compared using
-embeddings and sampled data is inspected for inclusion dependencies. The
-generated question/relationship pairs are written to
+each step and combines explicit foreign keys with heuristics based on column and
+table comments, column names and sample row overlap. Comments are fetched from
+the database DDL, compared using embeddings and sampled data is inspected for
+inclusion dependencies. The generated question/relationship pairs are written to
 `generated_datasets/schema_relationship/dataset_<run_version>.jsonl` (or
 `dataset.jsonl` if no version is provided) and can be invoked via
 `--phase schema_relationship` when running the CLI. Each dataset entry contains
