@@ -53,13 +53,13 @@ def load_template_messages(
         schema = SchemaLoader.to_json(schema)
 
     replacements = {
-        "schema_json": json.dumps(schema, indent=2),
+        "schema_json": json.dumps(schema, indent=2, default=str),
         "nl_question": nl_question,
     }
     if extra:
         for k, v in extra.items():
             if not isinstance(v, str):
-                v = json.dumps(v, indent=2)
+                v = json.dumps(v, indent=2, default=str)
             replacements[k] = v
     for key, val in replacements.items():
         text = text.replace(f"{{{{{key}}}}}", val)
