@@ -18,11 +18,33 @@ import os
 from dataclasses import dataclass
 from typing import Any, List
 import json
+import yaml
 
 from openai import AsyncOpenAI, OpenAI
 import logging
 
 log = logging.getLogger(__name__)
+
+
+def _load_budget() -> float:
+    """Return OpenAI budget from environment or ``config.yaml``."""
+
+    env_val = os.getenv("OPENAI_BUDGET_USD")
+    if env_val is not None:
+        try:
+            return float(env_val)
+        except ValueError:
+            return 0.0
+
+    cfg_path = os.path.join(os.path.dirname(__file__), "config.yaml")
+    try:
+        with open(cfg_path, "r", encoding="utf-8") as fh:
+            cfg = yaml.safe_load(fh)
+        if isinstance(cfg, dict) and "budget_usd" in cfg:
+            return float(cfg.get("budget_usd", 0.0))
+    except Exception:
+        pass
+    return 0.0
 
 
 @dataclass
@@ -361,7 +383,7 @@ async def acomplete(prompt: list[dict] | str, model: str | None = None) -> str:
     global _default_client
     model = model or "gpt-4.1"
     if _default_client is None or _default_client.model != model:
-        budget = float(os.getenv("OPENAI_BUDGET_USD", "0"))
+        budget = _load_budget()
         _default_client = ResponsesClient(model=model, budget_usd=budget)
     messages = prompt if isinstance(prompt, list) else [{"role": "user", "content": prompt}]
     return await _default_client.acomplete(messages)
