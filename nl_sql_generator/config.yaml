@@ -3,7 +3,7 @@ defaults:
 phases:
   - name: builtins
     count: 5
-    builtins: [COUNT, MAX, AVG]
+    builtins: [COUNT, SUM, AVG, MIN, MAX, COALESCE, NULLIF, CONCAT, LENGTH, SUBSTRING, LOWER, UPPER, TRIM, REPLACE, EXTRACT, DATE_TRUNC, NOW, CURRENT_DATE, CURRENT_TIMESTAMP, AGE, TO_CHAR, ROUND, CEIL, FLOOR, MOD, ABS, ROW_NUMBER, RANK, LAG, LEAD]
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/builtins
 
