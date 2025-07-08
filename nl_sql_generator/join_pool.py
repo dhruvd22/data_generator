@@ -82,7 +82,7 @@ class JoinPool:
     ) -> int:
         cfg = dict(self.cfg)
         if cfg.get("use_sample_rows"):
-            n_rows = int(cfg.get("n_rows", 5))
+            n_rows = int(cfg.get("n_rows", 2))
             sample_rows = {}
             for t in schema_subset:
                 try:
