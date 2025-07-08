@@ -62,8 +62,14 @@ def _estimate_cost(input_tokens: int, output_tokens: int, model: str) -> float:
     return input_tokens * in_rate + output_tokens * out_rate
 
 
-def _truncate_schema_lines(text: str) -> str:
-    """Return ``text`` with schema details removed for logging purposes."""
+def _truncate_schema_lines(text: str | None) -> str:
+    """Return ``text`` with schema details removed for logging purposes.
+
+    ``None`` inputs are treated as an empty string.
+    """
+    if not text:
+        return ""
+
     lower_text = text.lower()
 
     # Handle ``SCHEMA_JSON:`` blocks by keeping only table names
