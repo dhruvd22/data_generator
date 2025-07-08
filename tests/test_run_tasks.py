@@ -90,4 +90,42 @@ def test_run_version_overwrites(tmp_path):
     p.write_text("old\n")
     job.run_tasks([t, t], run_version="v1")
     content = p.read_text().strip().splitlines()
-    assert len(content) == 2
+    assert len(content) == 1
+
+
+def test_builtins_skip_fail(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult(t["question"], "FAIL", [])
+
+    job.run_task = _rt
+    t = {
+        "phase": "builtins",
+        "question": "bad?",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t])
+    assert writer.seen == []
+
+
+def test_deduplicate_pairs(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult(t["question"], "SELECT 1", [])
+
+    job.run_task = _rt
+    t = {
+        "phase": "demo",
+        "question": "same?",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t, t])
+    assert writer.seen == [{"question": "same?", "sql": "SELECT 1"}]

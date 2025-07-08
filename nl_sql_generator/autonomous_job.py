@@ -370,6 +370,7 @@ class AutonomousJob:
 
         results: list[JobResult | None] = [None] * len(tasks)
         cleared: set[str] = set()
+        dedup: dict[str, set[tuple[str, str]]] = {}
         sem = asyncio.Semaphore(max(parallelism, 1))
 
         async def _runner(idx: int, t: NLTask) -> None:
@@ -390,6 +391,8 @@ class AutonomousJob:
                             os.makedirs(out_dir, exist_ok=True)
                             open(path, "w").close()
                             cleared.add(path)
+                        if path not in dedup:
+                            dedup[path] = set()
                         if t.get("phase") in {"schema_docs", "schema_relationship"}:
                             for pair in res.rows:
                                 if (
@@ -401,13 +404,25 @@ class AutonomousJob:
                                         for k, v in pair.items()
                                         if k != "confidence"
                                     }
-                                self.writer.append_jsonl(pair, path)
+                                key = (pair.get("question"), pair.get("answer"))
+                                if key not in dedup[path]:
+                                    self.writer.append_jsonl(pair, path)
+                                    dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
                         else:
-                            self.writer.append_jsonl(
-                                {"question": res.question, "sql": res.sql}, path
-                            )
-                            log.info("Wrote dataset entry to %s", path)
+                            if t.get("phase") == "builtins" and res.sql == "FAIL":
+                                log.info("Skipping failed builtin pair for %s", path)
+                            else:
+                                key = (res.question, res.sql)
+                                if key not in dedup[path]:
+                                    self.writer.append_jsonl(
+                                        {"question": res.question, "sql": res.sql},
+                                        path,
+                                    )
+                                    dedup[path].add(key)
+                                    log.info("Wrote dataset entry to %s", path)
+                                else:
+                                    log.info("Skipped duplicate pair for %s", path)
 
         await asyncio.gather(*[_runner(i, t) for i, t in enumerate(tasks)])
         return [r for r in results if r is not None]
