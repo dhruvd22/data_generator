@@ -1,4 +1,6 @@
-import os, sys, asyncio
+import asyncio
+import os
+import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from nl_sql_generator.autonomous_job import AutonomousJob
 

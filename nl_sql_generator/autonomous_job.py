@@ -342,7 +342,7 @@ class AutonomousJob:
                         {
                             "role": "tool",
                             "tool_call_id": call.id,
-                            "content": json.dumps(result),
+                            "content": json.dumps(result, default=str),
                         }
                     )
                 continue
@@ -370,7 +370,7 @@ class AutonomousJob:
 
         results: list[JobResult | None] = [None] * len(tasks)
         cleared: set[str] = set()
-        dedup: dict[str, set[tuple[str, str]]] = {}
+        dedup: dict[str, set] = {}
         sem = asyncio.Semaphore(max(parallelism, 1))
 
         async def _runner(idx: int, t: NLTask) -> None:
@@ -379,6 +379,7 @@ class AutonomousJob:
                 log.info("Running task %d/%d: %s", idx + 1, total, t.get("question"))
                 res = await self.run_task(t)
                 results[idx] = res
+                log.info("Completed task %d/%d", idx + 1, total)
 
                 out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
                 if out_dir:
@@ -410,10 +411,13 @@ class AutonomousJob:
                                     dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
                         else:
-                            if t.get("phase") == "builtins" and res.sql == "FAIL":
-                                log.info("Skipping failed builtin pair for %s", path)
+                            if res.sql == "FAIL":
+                                log.info("Skipping failed pair for %s", path)
                             else:
-                                key = (res.question, res.sql)
+                                if t.get("phase") == "single_table":
+                                    key = res.sql
+                                else:
+                                    key = (res.question, res.sql)
                                 if key not in dedup[path]:
                                     self.writer.append_jsonl(
                                         {"question": res.question, "sql": res.sql},
@@ -425,6 +429,7 @@ class AutonomousJob:
                                     log.info("Skipped duplicate pair for %s", path)
 
         await asyncio.gather(*[_runner(i, t) for i, t in enumerate(tasks)])
+        log.info("All %d tasks completed", len(tasks))
         return [r for r in results if r is not None]
 
     @log_call
@@ -444,5 +449,10 @@ class AutonomousJob:
         if not tasks:
             return []
 
-        parallelism = int(tasks[0].get("metadata", {}).get("parallelism", 1))
+        parallelism = max(
+            int(t.get("metadata", {}).get("parallelism", 1)) for t in tasks
+        )
+        env_par = os.getenv("DG_PARALLELISM")
+        if env_par:
+            parallelism = max(parallelism, int(env_par))
         return asyncio.run(self._run_tasks_async(tasks, run_version, parallelism))
