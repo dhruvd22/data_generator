@@ -154,3 +154,28 @@ def test_single_table_multiple_pairs(tmp_path):
         {"question": "Q1", "sql": "S1"},
         {"question": "Q2", "sql": "S2"},
     ]
+
+
+def test_joins_multiple_pairs(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult("", "", [
+            {"question": "JQ1", "sql": "JS1"},
+            {"question": "JQ2", "sql": "JS2"},
+        ])
+
+    job.run_task = _rt
+    t = {
+        "phase": "joins",
+        "question": "",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t])
+    assert writer.seen == [
+        {"question": "JQ1", "sql": "JS1"},
+        {"question": "JQ2", "sql": "JS2"},
+    ]

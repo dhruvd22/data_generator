@@ -245,6 +245,23 @@ class AutonomousJob:
                     p["sql"] = "FAIL"
         return JobResult(task.get("question", ""), "", pairs)
 
+    async def _run_joins_async(self, task: NLTask) -> JobResult:
+        """Generate NL/SQL pairs that join multiple tables."""
+
+        from .join_pool import JoinPool
+        from .validator import SQLValidator as ValCls
+
+        pool = JoinPool(
+            self.schema,
+            task.get("metadata", {}),
+            ValCls,
+            self.writer,
+            self.critic,
+            self.client,
+        )
+        pairs = await pool.generate()
+        return JobResult(task.get("question", ""), "", pairs)
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -327,6 +344,8 @@ class AutonomousJob:
             return await self._run_schema_relationship_async(task)
         if task.get("phase") == "single_table" and task.get("metadata", {}).get("count"):
             return await self._run_single_table_async(task)
+        if task.get("phase") == "joins":
+            return await self._run_joins_async(task)
 
         base_content = (
             "You are a data-engineer agent. "
@@ -457,7 +476,7 @@ class AutonomousJob:
                                     self.writer.append_jsonl(pair, path)
                                     dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
-                        elif phase == "single_table" and res.rows:
+                        elif phase in {"single_table", "joins"} and res.rows:
                             for pair in res.rows:
                                 key = pair.get("sql")
                                 if key not in dedup[path]:
@@ -469,7 +488,7 @@ class AutonomousJob:
                                         path,
                                     )
                                     dedup[path].add(key)
-                            log.info("Wrote single table pairs to %s", path)
+                            log.info("Wrote %s pairs to %s", phase, path)
                         else:
                             if res.sql == "FAIL":
                                 log.info("Skipping failed pair for %s", path)
