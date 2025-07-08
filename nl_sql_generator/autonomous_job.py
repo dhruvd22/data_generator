@@ -19,6 +19,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List
 import asyncio
+import inspect
 import os
 
 from .input_loader import NLTask
@@ -200,7 +201,7 @@ class AutonomousJob:
     # internal helpers
     # ------------------------------------------------------------------
     @log_call
-    def _tool_generate_sql(self, nl_question: str) -> str:
+    async def _tool_generate_sql(self, nl_question: str) -> str:
         """LLM tool: generate SQL for ``nl_question``."""
         prompt_obj = build_prompt(nl_question, self.schema, self.phase_cfg)
         log.info("Generating SQL for question: %s", nl_question)
@@ -211,7 +212,7 @@ class AutonomousJob:
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt_obj},
             ]
-        sql = self.client.run_jobs([messages])[0]
+        sql = (await self.client.arun_jobs([messages]))[0]
         sql = sql.strip().strip("`")
         sql = re.sub(r"(?i)^sql\s*", "", sql)
         return _clean_sql(sql)
@@ -224,10 +225,10 @@ class AutonomousJob:
         return {"ok": ok, "error": err}
 
     @log_call
-    def _tool_critic(self, sql: str) -> Dict[str, Any]:
+    async def _tool_critic(self, sql: str) -> Dict[str, Any]:
         """LLM tool: run the critic."""
         log.info("Running critic on SQL")
-        result = self.critic.review("", sql, _schema_as_markdown(self.schema))
+        result = await self.critic.areview("", sql, _schema_as_markdown(self.schema))
         return result
 
     @log_call
@@ -290,7 +291,11 @@ class AutonomousJob:
         )
 
         while True:
-            msg = self.client.run_jobs([messages], tools=tools, return_message=True)[0]
+            msg = (
+                await self.client.arun_jobs(
+                    [messages], tools=tools, return_message=True
+                )
+            )[0]
             tool_calls = getattr(msg, "tool_calls", None)
             if tool_calls:
                 messages.append(msg if isinstance(msg, dict) else msg.model_dump())
@@ -299,6 +304,8 @@ class AutonomousJob:
                     args = json.loads(call.function.arguments or "{}")
                     log.info("Invoking tool %s with args %s", call.function.name, args)
                     result = fn(**args)
+                    if inspect.isawaitable(result):
+                        result = await result
                     log.info("Tool %s returned %s", call.function.name, result)
                     messages.append(
                         {

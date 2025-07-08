@@ -88,3 +88,43 @@ class Critic:
         score = float(result.get("score", 0))
         fixed_sql = str(result.get("fixed_sql", sql_candidate))
         return {"fixed_sql": fixed_sql, "score": score}
+
+    async def areview(
+        self, question: str, sql_candidate: str, schema_markdown: str
+    ) -> Dict[str, Any]:
+        """Asynchronous version of :meth:`review`."""
+
+        messages: List[Dict[str, str]] = [
+            {
+                "role": "system",
+                "content": (
+                    "Critic persona: Review SQL for correctness, index usage, security. "
+                    "Respond with a JSON object: {'score': 0-1, 'reason': str, 'fixed_sql': str}."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Question: {question}\nSQL Candidate:\n{sql_candidate}\n\nSchema:\n{schema_markdown}"
+                ),
+            },
+        ]
+
+        response = (await self.client.arun_jobs([messages]))[0]
+        try:
+            result = json.loads(response)
+        except json.JSONDecodeError:
+            result = {"score": 0.0, "reason": "Invalid JSON", "fixed_sql": sql_candidate}
+
+        self._log(
+            {
+                "question": question,
+                "candidate_sql": sql_candidate,
+                "schema": schema_markdown,
+                "model_response": result,
+            }
+        )
+
+        score = float(result.get("score", 0))
+        fixed_sql = str(result.get("fixed_sql", sql_candidate))
+        return {"fixed_sql": fixed_sql, "score": score}

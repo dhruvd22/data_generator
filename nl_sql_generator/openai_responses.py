@@ -168,14 +168,38 @@ class ResponsesClient:
             List of responses or messages in the same order as the input.
         """
 
-        async def runner() -> List[str]:
-            tasks = [
-                asyncio.create_task(self._worker(m, stream, tools, return_message))
-                for m in messages_list
-            ]
-            return await asyncio.gather(*tasks)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        if loop and loop.is_running():
+            raise RuntimeError(
+                "run_jobs cannot be called from an async context; use 'await arun_jobs'"
+            )
 
-        return asyncio.run(runner())
+        return asyncio.run(
+            self.arun_jobs(
+                messages_list,
+                stream=stream,
+                tools=tools,
+                return_message=return_message,
+            )
+        )
+
+    async def arun_jobs(
+        self,
+        messages_list: List[List[dict]],
+        stream: bool = False,
+        tools: List[dict] | None = None,
+        return_message: bool = False,
+    ) -> List[Any]:
+        """Asynchronously execute a batch of message lists and return the responses."""
+
+        tasks = [
+            asyncio.create_task(self._worker(m, stream, tools, return_message))
+            for m in messages_list
+        ]
+        return await asyncio.gather(*tasks)
 
     async def acomplete(
         self,
