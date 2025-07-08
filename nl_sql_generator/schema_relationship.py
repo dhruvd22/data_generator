@@ -22,6 +22,9 @@ __all__ = ["discover_relationships"]
 
 log = logging.getLogger(__name__)
 
+# minimum heuristic votes required for GPT confirmation
+THRESHOLD = 4
+
 # ----------------------------------------------------------------------
 # helper functions
 # ----------------------------------------------------------------------
@@ -113,6 +116,72 @@ async def _values_contained(
     return ratio >= 0.95
 
 
+async def _distinct_ratio(engine, table: str, column: str) -> float:
+    """Return ``COUNT(DISTINCT column) / COUNT(*)`` for ``table``."""
+
+    def _run() -> float:
+        with engine.connect() as conn:
+            q = text(
+                f"SELECT COUNT(DISTINCT {column})::FLOAT / NULLIF(COUNT(*), 0) " f"FROM {table}"
+            )
+            val = conn.execute(q).scalar()
+        return float(val or 0.0)
+
+    try:
+        return await asyncio.to_thread(_run)
+    except Exception as err:  # pragma: no cover - DB errors
+        log.warning("Distinct ratio failed: %s", err)
+        return 1.0
+
+
+async def _no_orphans(engine, child: str, child_col: str, parent: str, parent_pk: str) -> bool:
+    """Return ``True`` if every ``child.child_col`` value exists in ``parent``."""
+
+    def _run() -> bool:
+        with engine.connect() as conn:
+            q = text(
+                f"SELECT COUNT(*) = 0 AS ok FROM {child} c "
+                f"LEFT JOIN {parent} p ON c.{child_col} = p.{parent_pk} "
+                f"WHERE c.{child_col} IS NOT NULL AND p.{parent_pk} IS NULL"
+            )
+            return bool(conn.execute(q).scalar())
+
+    try:
+        return await asyncio.to_thread(_run)
+    except Exception as err:  # pragma: no cover - DB errors
+        log.warning("Orphan check failed: %s", err)
+        return False
+
+
+async def _gpt_second_opinion(child: str, col: str, parent: str, pk: str, score: int) -> str:
+    """Ask GPT to confirm a relationship and return its verdict."""
+
+    if openai is None or os.getenv("OPENAI_API_KEY") is None:
+        return "yes"
+
+    system = "You are a database expert. Reply with 'yes', 'no' or 'unsure'."
+    user = (
+        f"Child table: {child} column: {col}. Parent table: {parent} pk: {pk}. "
+        f"Heuristic vote: {score}/6. Is this a foreign key relationship?"
+    )
+
+    def _call() -> str:
+        client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        resp = client.chat.completions.create(
+            model="gpt-4.1",
+            messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
+            max_tokens=1,
+            temperature=0,
+        )
+        return resp.choices[0].message.content.strip().lower()
+
+    try:
+        return await asyncio.to_thread(_call)
+    except Exception as err:  # pragma: no cover - network failures
+        log.warning("GPT opinion failed: %s", err)
+        return "unsure"
+
+
 # ----------------------------------------------------------------------
 # main logic
 # ----------------------------------------------------------------------
@@ -151,25 +220,12 @@ async def discover_relationships(
                     }
                 )
 
-    # gather PK/unique info for heuristic checks
-    pk_unique: Dict[str, set[str]] = {}
-    for tbl in schema:
-        pkc = insp.get_pk_constraint(tbl).get("constrained_columns") or []
-        uniq = []
-        for uc in insp.get_unique_constraints(tbl):
-            uniq.extend(uc.get("column_names", []))
-        for idx in insp.get_indexes(tbl):
-            if idx.get("unique"):
-                uniq.extend(idx.get("column_names", []))
-        pk_unique[tbl] = set(pkc + uniq)
-    log.debug("PK/unique columns: %s", pk_unique)
+    # gather column info
 
     # mapping of column info
     type_map: Dict[tuple[str, str], str] = {}
     comment_map: Dict[tuple[str, str], str | None] = {}
-    table_comments: Dict[str, str | None] = {}
     for t, info in schema.items():
-        table_comments[t] = getattr(info, "comment", None)
         for col in info.columns:
             key = (t, col.name)
             type_map[key] = col.type_
@@ -179,66 +235,64 @@ async def discover_relationships(
     for ftbl, finfo in schema.items():
         for fcol in finfo.columns:
             ftype = type_map[(ftbl, fcol.name)]
-            fcomment = comment_map[(ftbl, fcol.name)]
-            for rtbl, _rinfo in schema.items():
+            fcomment = (comment_map[(ftbl, fcol.name)] or "").lower()
+            for rtbl, rinfo in schema.items():
                 if ftbl == rtbl:
                     continue
-                for rcol in _rinfo.columns:
-                    if rcol.name not in pk_unique.get(rtbl, set()):
-                        continue
-                    rtype = type_map[(rtbl, rcol.name)]
-                    rcomment = comment_map[(rtbl, rcol.name)]
-                    if not _same_type(ftype, rtype):
-                        continue
-                    sim = max(
-                        _name_similarity(fcol.name, rcol.name),
-                        _name_similarity(fcol.name, f"{rtbl}_{rcol.name}"),
-                        _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{rcol.name}"),
+                pk = rinfo.primary_key
+                if not pk:
+                    continue
+                rtype = type_map[(rtbl, pk)]
+
+                # --- heuristic signals
+                s1 = (
+                    max(
+                        _name_similarity(fcol.name, pk),
+                        _name_similarity(fcol.name, f"{rtbl}_{pk}"),
+                        _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{pk}"),
                     )
-                    if sim < 0.8:
-                        continue
-                    conf = 0.75
-                    if fcol.name.lower() in {f"{rtbl}_id", f"{rtbl.rstrip('s')}_id"}:
-                        conf += 0.05
-                    tcom_sim = await _combined_comment_similarity(
-                        fcomment,
-                        table_comments.get(ftbl),
-                        rcomment,
-                        table_comments.get(rtbl),
-                    )
-                    com_sim = tcom_sim
-                    if com_sim >= 0.83:
-                        conf += 0.1
-                    overlap = await _value_overlap(
-                        engine, ftbl, fcol.name, rtbl, rcol.name, sample_limit
-                    )
-                    if overlap >= 0.95:
-                        conf += 0.1
-                    elif overlap >= 0.7:
-                        conf += 0.05
-                    log.debug(
-                        "%s.%s vs %s.%s -> name_sim=%.2f, comment_sim=%.2f, overlap=%.2f, conf=%.2f",
-                        ftbl,
-                        fcol.name,
-                        rtbl,
-                        rcol.name,
-                        sim,
-                        com_sim,
-                        overlap,
-                        conf,
-                    )
-                    if conf >= 0.75:
-                        rel = f"{ftbl}.{fcol.name} -> {rtbl}.{rcol.name}"
-                        if rel in seen:
-                            continue
-                        seen.add(rel)
-                        results.append(
-                            {
-                                "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{rcol.name}?",
-                                "relationship": rel,
-                                "confidence": round(conf, 2),
-                            }
-                        )
+                    >= 0.8
+                )
+                s2 = _same_type(ftype, rtype)
+                mention_target = rtbl.lower().rstrip("s")
+                s3 = mention_target in fcomment
+                s4 = await _values_contained(engine, ftbl, fcol.name, rtbl, pk, sample_limit)
+                ratio = await _distinct_ratio(engine, ftbl, fcol.name)
+                s5 = ratio < 0.8
+                s6 = fcol.name.lower() != "id"
+
+                score = sum([s1, s2, s3, s4, s5, s6])
+                log.debug(
+                    "%s.%s -> %s.%s signals: %s score=%d",
+                    ftbl,
+                    fcol.name,
+                    rtbl,
+                    pk,
+                    [s1, s2, s3, s4, s5, s6],
+                    score,
+                )
+
+                if score < THRESHOLD:
+                    continue
+
+                gpt = await _gpt_second_opinion(ftbl, fcol.name, rtbl, pk, score)
+                if gpt != "yes":
+                    continue
+
+                if not await _no_orphans(engine, ftbl, fcol.name, rtbl, pk):
+                    continue
+
+                rel = f"{ftbl}.{fcol.name} -> {rtbl}.{pk}"
+                if rel in seen:
+                    continue
+                seen.add(rel)
+                results.append(
+                    {
+                        "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{pk}?",
+                        "relationship": rel,
+                        "confidence": score / 6,
+                    }
+                )
 
     results.sort(key=lambda r: r["confidence"], reverse=True)
     log.info("Discovered %d relationships", len(results))

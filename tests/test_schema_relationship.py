@@ -50,6 +50,12 @@ def test_fk_relationship(monkeypatch):
     )
     monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
 
+    async def _ratio(*args, **kwargs):
+        return 0.5
+
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._distinct_ratio", _ratio)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._no_orphans", _always_contained)
+
     schema = {
         "a": TableInfo("a", [ColumnInfo("b_id", "int")], None),
         "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
@@ -62,14 +68,16 @@ def test_heuristic_relationship(monkeypatch):
     inspector = DummyInspector()
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
 
-    async def _sim(*args, **kwargs):
-        return 0.9
-
     async def _val(*args, **kwargs):
         return True
 
-    monkeypatch.setattr("nl_sql_generator.schema_relationship._comment_similarity", _sim)
     monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _val)
+
+    async def _ratio2(*args, **kwargs):
+        return 0.5
+
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._distinct_ratio", _ratio2)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._no_orphans", _val)
 
     schema = {
         "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None, "tbl a"),
@@ -79,37 +87,41 @@ def test_heuristic_relationship(monkeypatch):
     assert rels[0]["relationship"] == "a.b_id -> b.id"
 
 
-def test_table_comment_similarity(monkeypatch):
+def test_distinct_ratio_called(monkeypatch):
     inspector = DummyInspector()
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
 
     calls = []
 
-    async def _sim(a, b):
-        calls.append((a, b))
-        return 0.9
+    async def _ratio(*args, **kwargs):
+        calls.append(args)
+        return 0.5
 
     async def _val(*args, **kwargs):
         return True
 
-    monkeypatch.setattr("nl_sql_generator.schema_relationship._comment_similarity", _sim)
     monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _val)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._distinct_ratio", _ratio)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._no_orphans", _val)
 
     schema = {
         "a": TableInfo("a", [ColumnInfo("b_id", "int", "ref")], None, "A table"),
         "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id", "B table"),
     }
     asyncio.run(discover_relationships(schema, DummyEngine()))
-    assert any("A table" in c[0] or "B table" in c[1] for c in calls)
+    assert calls
 
 
 def test_reject_low_similarity(monkeypatch):
     inspector = DummyInspector()
     monkeypatch.setattr("nl_sql_generator.schema_relationship.inspect", lambda e: inspector)
-    monkeypatch.setattr(
-        "nl_sql_generator.schema_relationship._comment_similarity", _noop_comment_similarity
-    )
     monkeypatch.setattr("nl_sql_generator.schema_relationship._values_contained", _always_contained)
+
+    async def _ratio3(*args, **kwargs):
+        return 1.0
+
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._distinct_ratio", _ratio3)
+    monkeypatch.setattr("nl_sql_generator.schema_relationship._no_orphans", _always_contained)
     schema = {
         "a": TableInfo("a", [ColumnInfo("foo", "int")], None),
         "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
