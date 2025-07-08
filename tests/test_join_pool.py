@@ -82,3 +82,40 @@ def test_join_pool_cleans_sql(monkeypatch):
     )
     result = asyncio.run(pool.generate())
     assert sorted(p["sql"] for p in result) == ["SELECT * FROM a", "SELECT * FROM b"]
+
+
+def test_join_pool_enforces_count_per_worker(monkeypatch):
+    class Worker:
+        def __init__(self, schema, cfg, validator_cls, critic, writer, wid, client):
+            self.wid = wid
+
+        async def generate(self, batch_size):
+            return [
+                {
+                    "question": f"Q{self.wid}-{i}",
+                    "sql": f"SELECT {self.wid}-{i}",
+                }
+                for i in range(batch_size)
+            ]
+
+    schema = {"a": {}, "b": {}}
+    writer = DummyWriter()
+    client = DummyClient()
+
+    monkeypatch.setattr("nl_sql_generator.join_pool.JoinWorker", Worker)
+
+    async def _chunks(self):
+        return [{"a": {}}, {"b": {}}]
+
+    monkeypatch.setattr("nl_sql_generator.join_pool.JoinPool._schema_chunks", _chunks)
+
+    pool = JoinPool(
+        schema,
+        {"parallelism": 2, "count": 2},
+        object,
+        writer,
+        None,
+        client,
+    )
+    result = asyncio.run(pool.generate())
+    assert len(result) == 4
