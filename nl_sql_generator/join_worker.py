@@ -1,5 +1,6 @@
 import logging
 import json
+import re
 from typing import Any, Dict, List
 from .openai_responses import ResponsesClient
 from .prompt_builder import load_template_messages, _schema_as_markdown
@@ -17,6 +18,19 @@ class JoinWorker:
         self.wid = wid
         self.client = client
 
+    def _join_table_count(self, sql: str) -> int:
+        """Return number of tables referenced via FROM/JOIN clauses."""
+        pattern = re.compile(r"\b(?:FROM|JOIN)\s+([\w\.\"`]+)", re.IGNORECASE)
+        tables = set()
+        for match in pattern.findall(sql):
+            tbl = match.split()[0]
+            tbl = tbl.strip('`"')
+            # strip schema prefix if present
+            if "." in tbl:
+                tbl = tbl.split(".")[-1]
+            tables.add(tbl)
+        return len(tables)
+
     async def generate(self, k: int) -> List[Dict[str, str]]:
         log.info("Worker %d generating %d join pairs", self.wid, k)
         extra = {
@@ -29,6 +43,7 @@ class JoinWorker:
         completion = await self.client.acomplete(messages)
         pairs = _parse_pairs(completion)
         results: List[Dict[str, str]] = []
+        min_joins = int(self.cfg.get("min_joins", 2))
         for p in pairs:
             q = p.get("question", "")
             sql = p.get("sql", "")
@@ -44,7 +59,7 @@ class JoinWorker:
                 fix = await self.critic.areview(q, sql, _schema_as_markdown(self.schema))
                 sql = fix.get("fixed_sql", sql)
                 attempts += 1
-            if sql and ok:
+            if sql and ok and self._join_table_count(sql) >= min_joins:
                 try:
                     self.writer.fetch(sql, int(self.cfg.get("n_rows", 5)))
                     results.append({"question": q, "sql": sql})
