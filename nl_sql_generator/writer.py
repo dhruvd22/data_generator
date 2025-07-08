@@ -103,9 +103,9 @@ class ResultWriter:
         if isinstance(value, (int, float)):
             return value
         if isinstance(value, datetime.datetime):
-            return self.fake.date_time_this_decade()
+            return self.fake.date_time_this_decade().isoformat(sep=" ")
         if isinstance(value, datetime.date):
-            return self.fake.date_this_decade()
+            return self.fake.date_this_decade().isoformat()
         if isinstance(value, datetime.time):
             return self.fake.time()
         if isinstance(value, str):

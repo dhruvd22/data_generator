@@ -39,4 +39,4 @@ def test_schema_split(monkeypatch):
     cfg = {"count": 2, "parallelism": 2}
     pool = AgentPool(schema, cfg, lambda: None, None, None)
     asyncio.run(pool.generate())
-    assert captured == [["t0", "t2"], ["t1", "t3"]]
+    assert captured == [["t0"], ["t1"]]

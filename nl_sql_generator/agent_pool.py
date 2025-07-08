@@ -47,8 +47,9 @@ class AgentPool:
         if not table_names:
             return [self.schema]
         n = min(n, len(table_names))
-        chunks = [table_names[i::n] for i in range(n)]
-        return [{t: self.schema[t] for t in c} for c in chunks]
+        return [
+            {table_names[i]: self.schema[table_names[i]]} for i in range(n)
+        ]
 
     async def _run_worker(
         self, batch_size: int, worker_id: int, schema: Dict[str, Any]
