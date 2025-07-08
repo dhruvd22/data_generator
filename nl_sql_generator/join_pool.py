@@ -128,27 +128,42 @@ class JoinPool:
         return delta
 
     async def generate(self) -> List[Dict[str, str]]:
-        goal = int(self.cfg.get("count", 1))
+        per_worker = int(self.cfg.get("count", 1))
         schema_chunks = await self._schema_chunks()
         n_workers = len(schema_chunks)
         self.log.info("Spawning %d workers", n_workers)
-        k = math.ceil(goal / max(n_workers, 1))
         attempts = 0
+        produced = [0] * n_workers
         self.log.info(
-            "Starting join generation: goal=%d parallelism=%d batch_size=%d",
-            goal,
+            "Starting join generation: per_worker=%d parallelism=%d",
+            per_worker,
             n_workers,
-            k,
         )
-        while len(self.seen) < goal and attempts < self.cfg.get("max_attempts", 6):
-            jobs = [self._run_worker(k, i, schema_chunks[i]) for i in range(n_workers)]
-            await asyncio.gather(*jobs)
+
+        while (
+            any(p < per_worker for p in produced)
+            and attempts < self.cfg.get("max_attempts", 6)
+        ):
+            jobs = []
+            for i in range(n_workers):
+                remaining = per_worker - produced[i]
+                if remaining > 0:
+                    jobs.append(self._run_worker(remaining, i, schema_chunks[i]))
+                else:
+                    jobs.append(asyncio.sleep(0, result=0))
+
+            deltas = await asyncio.gather(*jobs)
+            for i, d in enumerate(deltas):
+                produced[i] += d
+
             attempts += 1
             self.log.info(
-                "Attempt %d complete, total pairs=%d", attempts, len(self.seen)
+                "Attempt %d complete, per-worker totals=%s", attempts, produced
             )
+
+        total_goal = per_worker * n_workers
         self.log.info("Join generation finished with %d pairs", len(self.seen))
         return [
             {"question": q, "sql": _clean_sql(s)}
-            for q, s in itertools.islice(self.seen, goal)
+            for q, s in itertools.islice(self.seen, total_goal)
         ]
