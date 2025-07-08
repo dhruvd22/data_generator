@@ -44,7 +44,7 @@ phases:
     n_rows: 500
     prompt_template: schema_relationship_template.txt
     dataset_output_file_dir: generated_datasets/schema_relationship
-    tag_schema_json: true
+    tag_schema_json: false
 
 budget_usd: 10.0
 openai_model: gpt-4.1
