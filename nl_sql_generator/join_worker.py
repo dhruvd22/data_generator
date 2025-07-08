@@ -9,8 +9,18 @@ from .autonomous_job import _clean_sql
 
 log = logging.getLogger(__name__)
 
+
 class JoinWorker:
-    def __init__(self, schema: Dict[str, Any], cfg: Dict[str, Any], validator_cls, critic, writer, wid: int, client: ResponsesClient) -> None:
+    def __init__(
+        self,
+        schema: Dict[str, Any],
+        cfg: Dict[str, Any],
+        validator_cls,
+        critic,
+        writer,
+        wid: int,
+        client: ResponsesClient,
+    ) -> None:
         self.schema = schema
         self.cfg = cfg
         self.validator = validator_cls()
@@ -40,7 +50,14 @@ class JoinWorker:
         }
         if "sample_rows" in self.cfg:
             extra["sample_rows"] = self.cfg["sample_rows"]
-        messages = load_template_messages("join_sql_template.txt", self.schema, "", extra)
+        messages = load_template_messages(
+            "join_sql_template.txt", self.schema, "", extra
+        )
+        log.info(
+            "Worker %d sending prompt with tables %s",
+            self.wid,
+            list(self.schema),
+        )
         completion = await self.client.acomplete(messages)
         pairs = _parse_pairs(completion)
         results: List[Dict[str, str]] = []
@@ -57,7 +74,9 @@ class JoinWorker:
                 if attempts >= 2:
                     sql = None
                     break
-                fix = await self.critic.areview(q, sql, _schema_as_markdown(self.schema))
+                fix = await self.critic.areview(
+                    q, sql, _schema_as_markdown(self.schema)
+                )
                 sql = _clean_sql(fix.get("fixed_sql", sql))
                 attempts += 1
             if sql and ok and self._join_table_count(sql) >= min_joins:
