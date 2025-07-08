@@ -17,6 +17,24 @@ import random
 import yaml
 
 
+def _natural_builtin_question(fn: str, table: str) -> str:
+    """Return a natural language question for ``fn`` and ``table``."""
+
+    fn = fn.upper()
+    table = table.replace("_", " ")
+    specific = {
+        "COUNT": f"Using the COUNT function, get the total number of rows in the {table} table.",
+    }
+    if fn in specific:
+        return specific[fn]
+    templates = [
+        "Using the {fn} function, show an example query on the {table} table.",
+        "Use {fn} to retrieve information from the {table} table.",
+        "Show how to apply {fn} on the {table} table.",
+    ]
+    return random.choice(templates).format(fn=fn, table=table)
+
+
 class NLTask(TypedDict):
     """A single natural-language question with context.
 
@@ -121,27 +139,35 @@ def load_tasks(
         if isinstance(builtins_spec, dict):
             for fn, cnt in builtins_spec.items():
                 for i in range(int(cnt or 5)):
-                    table = random.choice(table_names) if table_names else f"table_{i + 1}"
-                    q = f"Write a query using {fn} on {table}"
+                    table = (
+                        random.choice(table_names) if table_names else f"table_{i + 1}"
+                    )
+                    q = _natural_builtin_question(fn, table)
                     meta_with_fn = {**meta, "builtins": [fn]}
-                    tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
+                    tasks.append(
+                        {"phase": name, "question": q, "metadata": meta_with_fn}
+                    )
             continue
 
         if isinstance(builtins_spec, list):
             per_fn = count or 5
             for fn in builtins_spec:
                 for i in range(per_fn):
-                    table = random.choice(table_names) if table_names else f"table_{i + 1}"
-                    q = f"Write a query using {fn} on {table}"
+                    table = (
+                        random.choice(table_names) if table_names else f"table_{i + 1}"
+                    )
+                    q = _natural_builtin_question(fn, table)
                     meta_with_fn = {**meta, "builtins": [fn]}
-                    tasks.append({"phase": name, "question": q, "metadata": meta_with_fn})
+                    tasks.append(
+                        {"phase": name, "question": q, "metadata": meta_with_fn}
+                    )
             continue
 
         builtins = meta.get("builtins", [])
         for i in range(count):
             builtin = random.choice(builtins) if builtins else "COUNT"
             table = random.choice(table_names) if table_names else f"table_{i + 1}"
-            q = f"Write a query using {builtin} on {table}"
+            q = _natural_builtin_question(builtin, table)
             tasks.append({"phase": name, "question": q, "metadata": meta})
 
     return tasks
