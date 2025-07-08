@@ -1,13 +1,19 @@
+"""Per-worker agent that produces schema question/answer pairs."""
+
 import json
+import logging
 from typing import Any, Dict, List
+
+log = logging.getLogger(__name__)
 
 
 def _parse_pairs(text: str) -> List[Dict[str, str]]:
-    """Return JSON objects from ``text`` one per valid line.
+    """Return valid JSON objects from ``text`` one per line.
 
-    The OpenAI responses occasionally include markdown fences or extra prose.
-    This helper skips such lines and ignores JSON decode errors so that callers
-    only receive well formed ``{"question": ..., "answer": ...}`` mappings.
+    The OpenAI API sometimes prefixes responses with formatting such as
+    Markdown fences or bullet lists.  This helper filters such noise and
+    quietly skips lines that fail ``json.loads`` so that callers only see
+    well-formed ``{"question": ..., "answer": ...}`` dictionaries.
     """
 
     pairs: List[Dict[str, str]] = []
@@ -25,6 +31,7 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
             continue
         if isinstance(obj, dict):
             pairs.append(obj)
+    log.debug("Parsed %d QA pairs", len(pairs))
     return pairs
 
 
@@ -33,6 +40,8 @@ from .openai_responses import ResponsesClient  # noqa: E402
 
 
 class WorkerAgent:
+    """Generate schema question/answer pairs using a single OpenAI worker."""
+
     def __init__(
         self,
         schema: Dict[str, Any],
@@ -41,6 +50,16 @@ class WorkerAgent:
         wid: int,
         client: ResponsesClient,
     ) -> None:
+        """Create a worker.
+
+        Args:
+            schema: Table metadata subset for this worker.
+            cfg: Phase configuration dictionary.
+            validator_cls: Callable returning a validator instance.
+            wid: Worker identifier used in logs.
+            client: Shared :class:`ResponsesClient`.
+        """
+
         self.schema = schema
         self.cfg = cfg
         self.validator = validator_cls()
@@ -48,7 +67,13 @@ class WorkerAgent:
         self.client = client
 
     async def generate(self, k: int) -> List[Dict[str, str]]:
+        """Return ``k`` Q&A pairs generated from this worker's schema slice."""
+
+        log.info("Worker %d generating %d pairs", self.wid, k)
         prompt = build_schema_doc_prompt(self.schema, k=k)
-        completion = await self.client.acomplete(prompt, model=self.cfg.get("openai_model"))
+        completion = await self.client.acomplete(
+            prompt, model=self.cfg.get("openai_model")
+        )
         pairs = _parse_pairs(completion)
+        log.info("Worker %d produced %d pairs", self.wid, len(pairs))
         return pairs
