@@ -11,6 +11,8 @@ from difflib import SequenceMatcher
 import numpy as np
 from sqlalchemy import inspect, text
 
+from .sql_validator import SQLValidator
+
 try:  # optional openai support
     import openai
 except Exception:  # pragma: no cover - optional dependency
@@ -23,7 +25,7 @@ __all__ = ["discover_relationships"]
 log = logging.getLogger(__name__)
 
 # minimum heuristic votes required for GPT confirmation
-THRESHOLD = 3
+THRESHOLD = 4
 
 # ----------------------------------------------------------------------
 # helper functions
@@ -219,6 +221,9 @@ async def discover_relationships(
     log.info("Starting relationship discovery with sample_limit=%d", sample_limit)
 
     insp = inspect(engine)
+    validator = None
+    if getattr(engine, "url", None):
+        validator = SQLValidator(str(engine.url))
     results: List[Dict[str, Any]] = []
     seen: set[str] = set()
 
@@ -268,16 +273,20 @@ async def discover_relationships(
         fcomment = (comment_map[(ftbl, fcol.name)] or "").lower()
         rtype = type_map[(rtbl, pk)]
 
+        base_rtbl = rtbl.lower().rstrip("s")
         s1 = (
             max(
                 _name_similarity(fcol.name, pk),
                 _name_similarity(fcol.name, f"{rtbl}_{pk}"),
-                _name_similarity(fcol.name, f"{rtbl.rstrip('s')}_{pk}"),
+                _name_similarity(fcol.name, f"{base_rtbl}_{pk}"),
+                _name_similarity(fcol.name, rtbl),
+                _name_similarity(fcol.name, base_rtbl),
             )
             >= 0.8
+            or base_rtbl in fcol.name.lower()
         )
         s2 = _same_type(ftype, rtype)
-        mention_target = rtbl.lower().rstrip("s")
+        mention_target = base_rtbl
         s3 = mention_target in fcomment
 
         async with sem:
@@ -310,6 +319,18 @@ async def discover_relationships(
         async with sem:
             ok = await _no_orphans(engine, ftbl, fcol.name, rtbl, pk)
         if not ok:
+            return
+
+        sql = (
+            f"SELECT 1 FROM {ftbl} a JOIN {rtbl} b ON a.{fcol.name} = b.{pk} LIMIT 1"
+        )
+        validator_ok = True
+        if validator:
+            validator_ok, _ = await asyncio.to_thread(validator.check, sql)
+            log.info("Validation of relationship SQL '%s': %s", sql, validator_ok)
+        else:
+            log.info("Validation skipped for SQL '%s'", sql)
+        if not validator_ok:
             return
 
         rel = f"{ftbl}.{fcol.name} -> {rtbl}.{pk}"

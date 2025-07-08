@@ -105,9 +105,11 @@ config.yaml ──▶ InputLoader ──▶ AutonomousJob
 
 This phase automatically discovers how tables relate to each other. It now logs
 each step and combines explicit foreign keys with heuristics based on column and
-table comments, column names and sample row overlap. Comments are fetched from
-the database DDL, compared using embeddings and sampled data is inspected for
-inclusion dependencies. The generated question/relationship pairs are written to
+table comments, column names and sample row overlap. Column names are also
+matched against table names so fields like `payer` correctly link to
+`payer.id`. A heuristic score of four or more triggers GPT confirmation and the
+resulting join is validated via `EXPLAIN`. The generated question/relationship
+pairs are written to
 `generated_datasets/schema_relationship/dataset_<run_version>.jsonl` (or
 `dataset.jsonl` if no version is provided) and can be invoked via
 `--phase schema_relationship` when running the CLI. Each dataset entry contains
