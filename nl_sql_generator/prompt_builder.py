@@ -111,6 +111,9 @@ def build_prompt(
         builtin = phase_cfg.get("builtins", [None])[0]
         if builtin:
             extra["builtin"] = builtin
+        table = phase_cfg.get("table")
+        if table:
+            extra["table"] = table
         if "sample_rows" in phase_cfg:
             extra["sample_rows"] = phase_cfg["sample_rows"]
         return load_template_messages(template_name, schema, nl_question, extra)
