@@ -9,9 +9,24 @@ Example:
     >>> job = AutonomousJob(schema)
 """
 
-from .autonomous_job import AutonomousJob, JobResult
-from .input_loader import NLTask, load_tasks
-from .logger import Settings, init_logger, log_call
+
+from importlib import import_module
+
+def _load(name: str):
+    module_map = {
+        "AutonomousJob": "autonomous_job",
+        "JobResult": "autonomous_job",
+        "NLTask": "input_loader",
+        "load_tasks": "input_loader",
+        "Settings": "logger",
+        "init_logger": "logger",
+        "log_call": "logger",
+        "SchemaLoader": "schema_loader",
+        "TableInfo": "schema_loader",
+    }
+    mod = import_module(f".{module_map[name]}", __name__)
+    return getattr(mod, name)
+
 
 __all__ = [
     "AutonomousJob",
@@ -21,4 +36,12 @@ __all__ = [
     "Settings",
     "init_logger",
     "log_call",
+    "SchemaLoader",
+    "TableInfo",
 ]
+
+
+def __getattr__(name: str):
+    if name in __all__:
+        return _load(name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
