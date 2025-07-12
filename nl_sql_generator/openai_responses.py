@@ -20,7 +20,10 @@ from typing import Any, List
 import json
 import yaml
 
-from openai import AsyncOpenAI, OpenAI
+try:  # pragma: no cover - optional dependency
+    from openai import AsyncOpenAI, OpenAI
+except Exception:  # pragma: no cover - if openai missing
+    AsyncOpenAI = OpenAI = None
 import logging
 
 log = logging.getLogger(__name__)
@@ -169,8 +172,8 @@ class ResponsesClient:
         self.usage = Usage()
 
         api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise RuntimeError("Set OPENAI_API_KEY first")
+        if AsyncOpenAI is None or not api_key:
+            raise RuntimeError("OpenAI package not available or OPENAI_API_KEY not set")
 
         self._client = AsyncOpenAI(api_key=api_key)
         self._sync_client = OpenAI(api_key=api_key)
