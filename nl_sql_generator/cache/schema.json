@@ -1,756 +1,1016 @@
 {
   "tables": {
-    "procedures": {
-      "columns": {
-        "DATE": {
-          "type": "TIMESTAMP",
-          "comment": "Date of the procedure"
-        },
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "ENCOUNTER": {
-          "type": "UUID",
-          "comment": "Encounter associated with the procedure"
-        },
-        "CODE": {
-          "type": "BIGINT",
-          "comment": "Procedure code"
-        },
-        "DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Procedure description"
-        },
-        "BASE_COST": {
-          "type": "NUMERIC",
-          "comment": "Base cost of the procedure"
-        },
-        "REASONCODE": {
-          "type": "BIGINT",
-          "comment": "Reason code for the procedure"
-        },
-        "REASONDESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Reason description for the procedure"
-        }
-      },
-      "primary_key": null
-    },
-    "payers": {
-      "columns": {
-        "Id": {
-          "type": "UUID",
-          "comment": "Primary key for the payer"
-        },
-        "NAME": {
-          "type": "TEXT",
-          "comment": "Payer name"
-        },
-        "ADDRESS": {
-          "type": "TEXT",
-          "comment": "Address of the payer"
-        },
-        "CITY": {
-          "type": "TEXT",
-          "comment": "City where the payer is located"
-        },
-        "STATE_HEADQUARTERED": {
-          "type": "TEXT",
-          "comment": "State where payer is headquartered"
-        },
-        "ZIP": {
-          "type": "INTEGER",
-          "comment": "Zip code"
-        },
-        "PHONE": {
-          "type": "TEXT",
-          "comment": "Contact phone number"
-        },
-        "AMOUNT_COVERED": {
-          "type": "NUMERIC",
-          "comment": "Amount covered by the payer"
-        },
-        "AMOUNT_UNCOVERED": {
-          "type": "NUMERIC",
-          "comment": "Amount not covered"
-        },
-        "REVENUE": {
-          "type": "NUMERIC",
-          "comment": "Total revenue of the payer"
-        },
-        "COVERED_ENCOUNTERS": {
-          "type": "NUMERIC",
-          "comment": "Number of encounters covered"
-        },
-        "UNCOVERED_ENCOUNTERS": {
-          "type": "NUMERIC",
-          "comment": "Number of encounters not covered"
-        },
-        "COVERED_MEDICATIONS": {
-          "type": "NUMERIC",
-          "comment": "Number of medications covered"
-        },
-        "UNCOVERED_MEDICATIONS": {
-          "type": "NUMERIC",
-          "comment": "Number of medications not covered"
-        },
-        "COVERED_PROCEDURES": {
-          "type": "NUMERIC",
-          "comment": "Number of procedures covered"
-        },
-        "UNCOVERED_PROCEDURES": {
-          "type": "NUMERIC",
-          "comment": "Number of procedures not covered"
-        },
-        "COVERED_IMMUNIZATIONS": {
-          "type": "NUMERIC",
-          "comment": "Number of immunizations covered"
-        },
-        "UNCOVERED_IMMUNIZATIONS": {
-          "type": "NUMERIC",
-          "comment": "Number of immunizations not covered"
-        },
-        "UNIQUE_CUSTOMERS": {
-          "type": "INTEGER",
-          "comment": "Count of unique customers"
-        },
-        "QOLS_AVG": {
-          "type": "NUMERIC",
-          "comment": "Average quality of life score"
-        },
-        "MEMBER_MONTHS": {
-          "type": "INTEGER",
-          "comment": "Total member months"
-        }
-      },
-      "primary_key": null
-    },
-    "encounters": {
-      "columns": {
-        "Id": {
-          "type": "UUID",
-          "comment": "Primary key for the encounter"
-        },
-        "START": {
-          "type": "TIMESTAMP",
-          "comment": "Time the encounter started"
-        },
-        "STOP": {
-          "type": "TIMESTAMP",
-          "comment": "Time the encounter ended"
-        },
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "ORGANIZATION": {
-          "type": "UUID",
-          "comment": "Organization providing care"
-        },
-        "PROVIDER": {
-          "type": "UUID",
-          "comment": "Primary provider for the encounter"
-        },
-        "PAYER": {
-          "type": "UUID",
-          "comment": "Payer responsible for the encounter"
-        },
-        "ENCOUNTERCLASS": {
-          "type": "TEXT",
-          "comment": "Type of encounter"
-        },
-        "CODE": {
-          "type": "BIGINT",
-          "comment": "Encounter code"
-        },
-        "DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Description of the encounter"
-        },
-        "BASE_ENCOUNTER_COST": {
-          "type": "NUMERIC",
-          "comment": "Base cost of the encounter"
-        },
-        "TOTAL_CLAIM_COST": {
-          "type": "NUMERIC",
-          "comment": "Total claim cost"
-        },
-        "PAYER_COVERAGE": {
-          "type": "NUMERIC",
-          "comment": "Amount covered by the payer"
-        },
-        "REASONCODE": {
-          "type": "BIGINT",
-          "comment": "Reason code for the encounter"
-        },
-        "REASONDESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Reason description for the encounter"
-        }
-      },
-      "primary_key": "Id"
-    },
     "supplies": {
       "columns": {
-        "DATE": {
+        "date": {
           "type": "TIMESTAMP",
           "comment": "Date the supply was provided"
         },
-        "PATIENT": {
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "encounter": {
           "type": "UUID",
           "comment": "Encounter related to the supply"
         },
-        "CODE": {
+        "code": {
           "type": "INTEGER",
           "comment": "Supply code"
         },
-        "DESCRIPTION": {
+        "description": {
           "type": "TEXT",
           "comment": "Description of the supply"
         },
-        "QUANTITY": {
+        "quantity": {
           "type": "INTEGER",
           "comment": "Quantity dispensed"
         }
       },
-      "primary_key": null
-    },
-    "patients": {
-      "columns": {
-        "Id": {
-          "type": "UUID",
-          "comment": "Primary key for the patient"
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
         },
-        "BIRTHDATE": {
-          "type": "DATE",
-          "comment": "Date of birth"
-        },
-        "DEATHDATE": {
-          "type": "DATE",
-          "comment": "Date of death"
-        },
-        "SSN": {
-          "type": "TEXT",
-          "comment": "Social security number"
-        },
-        "DRIVERS": {
-          "type": "TEXT",
-          "comment": "Driver license number"
-        },
-        "PASSPORT": {
-          "type": "TEXT",
-          "comment": "Passport number"
-        },
-        "PREFIX": {
-          "type": "TEXT",
-          "comment": "Name prefix"
-        },
-        "FIRST": {
-          "type": "TEXT",
-          "comment": "First name"
-        },
-        "LAST": {
-          "type": "TEXT",
-          "comment": "Last name"
-        },
-        "SUFFIX": {
-          "type": "TEXT",
-          "comment": "Name suffix"
-        },
-        "MAIDEN": {
-          "type": "TEXT",
-          "comment": "Maiden name"
-        },
-        "MARITAL": {
-          "type": "TEXT",
-          "comment": "Marital status"
-        },
-        "RACE": {
-          "type": "TEXT",
-          "comment": "Race of the patient"
-        },
-        "ETHNICITY": {
-          "type": "TEXT",
-          "comment": "Ethnicity of the patient"
-        },
-        "GENDER": {
-          "type": "TEXT",
-          "comment": "Gender of the patient"
-        },
-        "BIRTHPLACE": {
-          "type": "TEXT",
-          "comment": "Birthplace of the patient"
-        },
-        "ADDRESS": {
-          "type": "TEXT",
-          "comment": "Street address"
-        },
-        "CITY": {
-          "type": "TEXT",
-          "comment": "City of residence"
-        },
-        "STATE": {
-          "type": "TEXT",
-          "comment": "State of residence"
-        },
-        "COUNTY": {
-          "type": "TEXT",
-          "comment": "County of residence"
-        },
-        "ZIP": {
-          "type": "INTEGER",
-          "comment": "Zip code"
-        },
-        "LAT": {
-          "type": "NUMERIC",
-          "comment": "Latitude coordinate"
-        },
-        "LON": {
-          "type": "NUMERIC",
-          "comment": "Longitude coordinate"
-        },
-        "HEALTHCARE_EXPENSES": {
-          "type": "NUMERIC",
-          "comment": "Total healthcare expenses"
-        },
-        "HEALTHCARE_COVERAGE": {
-          "type": "NUMERIC",
-          "comment": "Total healthcare coverage amount"
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
         }
-      },
-      "primary_key": null
-    },
-    "payer_transitions": {
-      "columns": {
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "START_YEAR": {
-          "type": "INTEGER",
-          "comment": "Year coverage started"
-        },
-        "END_YEAR": {
-          "type": "INTEGER",
-          "comment": "Year coverage ended"
-        },
-        "PAYER": {
-          "type": "UUID",
-          "comment": "Payer during the coverage period"
-        },
-        "OWNERSHIP": {
-          "type": "TEXT",
-          "comment": "Ownership type of the policy"
-        }
-      },
-      "primary_key": null
+      ]
     },
     "providers": {
       "columns": {
-        "Id": {
+        "id": {
           "type": "UUID",
           "comment": "Primary key for the provider"
         },
-        "ORGANIZATION": {
+        "organization": {
           "type": "UUID",
           "comment": "Identifier of the organization"
         },
-        "NAME": {
+        "name": {
           "type": "TEXT",
           "comment": "Provider name"
         },
-        "GENDER": {
+        "gender": {
           "type": "TEXT",
           "comment": "Gender of the provider"
         },
-        "SPECIALITY": {
+        "speciality": {
           "type": "TEXT",
           "comment": "Provider specialty"
         },
-        "ADDRESS": {
+        "address": {
           "type": "TEXT",
           "comment": "Street address"
         },
-        "CITY": {
+        "city": {
           "type": "TEXT",
           "comment": "City"
         },
-        "STATE": {
+        "state": {
           "type": "TEXT",
           "comment": "State"
         },
-        "ZIP": {
+        "zip": {
           "type": "TEXT",
           "comment": "Zip code"
         },
-        "LAT": {
+        "lat": {
           "type": "NUMERIC",
           "comment": "Latitude coordinate"
         },
-        "LON": {
+        "lon": {
           "type": "NUMERIC",
           "comment": "Longitude coordinate"
         },
-        "UTILIZATION": {
+        "utilization": {
           "type": "BIGINT",
           "comment": "Utilization metric"
         }
       },
-      "primary_key": null
-    },
-    "devices": {
-      "columns": {
-        "STOP": {
-          "type": "TIMESTAMP",
-          "comment": "Timestamp when the device was removed"
-        },
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "ENCOUNTER": {
-          "type": "UUID",
-          "comment": "Encounter associated with the device"
-        },
-        "CODE": {
-          "type": "INTEGER",
-          "comment": "Device code"
-        },
-        "DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Description of the device"
-        },
-        "UDI": {
-          "type": "TEXT",
-          "comment": "Unique device identifier"
-        },
-        "START": {
-          "type": "TIMESTAMP",
-          "comment": "Timestamp when the device was placed"
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "organizations",
+          "constrained_columns": [
+            "organization"
+          ],
+          "referred_columns": [
+            "id"
+          ]
         }
-      },
-      "primary_key": null
-    },
-    "imaging_studies": {
-      "columns": {
-        "Id": {
-          "type": "UUID",
-          "comment": "Primary key for the imaging study"
-        },
-        "DATE": {
-          "type": "TIMESTAMP",
-          "comment": "Date the imaging was performed"
-        },
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "ENCOUNTER": {
-          "type": "UUID",
-          "comment": "Encounter related to the imaging"
-        },
-        "BODYSITE_CODE": {
-          "type": "TEXT",
-          "comment": "Code for body site imaged"
-        },
-        "BODYSITE_DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Description of the body site"
-        },
-        "MODALITY_CODE": {
-          "type": "TEXT",
-          "comment": "Imaging modality code"
-        },
-        "MODALITY_DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Imaging modality description"
-        },
-        "SOP_CODE": {
-          "type": "TEXT",
-          "comment": "SOP code for the image"
-        },
-        "SOP_DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "SOP description for the image"
-        }
-      },
-      "primary_key": "Id"
-    },
-    "allergies": {
-      "columns": {
-        "START": {
-          "type": "DATE",
-          "comment": "Date when the allergy episode began"
-        },
-        "STOP": {
-          "type": "DATE",
-          "comment": "Date when the allergy episode resolved"
-        },
-        "PATIENT": {
-          "type": "UUID",
-          "comment": "Identifier of the patient"
-        },
-        "ENCOUNTER": {
-          "type": "UUID",
-          "comment": "Encounter during which the allergy was recorded"
-        },
-        "CODE": {
-          "type": "INTEGER",
-          "comment": "Code representing the allergy"
-        },
-        "DESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Human readable allergy description"
-        }
-      },
-      "primary_key": null
+      ]
     },
     "organizations": {
       "columns": {
-        "Id": {
+        "id": {
           "type": "UUID",
           "comment": "Primary key for the organization"
         },
-        "NAME": {
+        "name": {
           "type": "TEXT",
           "comment": "Organization name"
         },
-        "ADDRESS": {
+        "address": {
           "type": "TEXT",
           "comment": "Street address of the organization"
         },
-        "CITY": {
+        "city": {
           "type": "TEXT",
           "comment": "City where the organization is located"
         },
-        "STATE": {
+        "state": {
           "type": "TEXT",
           "comment": "State of the organization"
         },
-        "ZIP": {
+        "zip": {
           "type": "TEXT",
           "comment": "Postal code"
         },
-        "LAT": {
+        "lat": {
           "type": "NUMERIC",
           "comment": "Latitude coordinate"
         },
-        "LON": {
+        "lon": {
           "type": "NUMERIC",
           "comment": "Longitude coordinate"
         },
-        "PHONE": {
+        "phone": {
           "type": "TEXT",
           "comment": "Contact phone number"
         },
-        "REVENUE": {
+        "revenue": {
           "type": "NUMERIC",
           "comment": "Organization revenue"
         },
-        "UTILIZATION": {
+        "utilization": {
           "type": "INTEGER",
           "comment": "Utilization rate"
         }
       },
-      "primary_key": "Id"
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": []
     },
-    "immunizations": {
+    "procedures": {
       "columns": {
-        "DATE": {
+        "date": {
           "type": "TIMESTAMP",
-          "comment": "Date the immunization was given"
+          "comment": "Date of the procedure"
         },
-        "PATIENT": {
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "encounter": {
           "type": "UUID",
-          "comment": "Encounter during which the immunization occurred"
+          "comment": "Encounter associated with the procedure"
         },
-        "CODE": {
-          "type": "INTEGER",
-          "comment": "Immunization code"
+        "code": {
+          "type": "BIGINT",
+          "comment": "Procedure code"
         },
-        "DESCRIPTION": {
+        "description": {
           "type": "TEXT",
-          "comment": "Description of the immunization"
+          "comment": "Procedure description"
         },
-        "BASE_COST": {
+        "base_cost": {
           "type": "NUMERIC",
-          "comment": "Base cost of the immunization"
+          "comment": "Base cost of the procedure"
+        },
+        "reasoncode": {
+          "type": "BIGINT",
+          "comment": "Reason code for the procedure"
+        },
+        "reasondescription": {
+          "type": "TEXT",
+          "comment": "Reason description for the procedure"
         }
       },
-      "primary_key": null
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
     },
-    "careplans": {
+    "payer_transitions": {
       "columns": {
-        "Id": {
-          "type": "UUID",
-          "comment": "Primary key for the care plan"
-        },
-        "START": {
-          "type": "DATE",
-          "comment": "Date the care plan started"
-        },
-        "STOP": {
-          "type": "DATE",
-          "comment": "Date the care plan ended"
-        },
-        "PATIENT": {
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "start_year": {
+          "type": "INTEGER",
+          "comment": "Year coverage started"
+        },
+        "end_year": {
+          "type": "INTEGER",
+          "comment": "Year coverage ended"
+        },
+        "payer": {
           "type": "UUID",
-          "comment": "Encounter associated with the plan"
+          "comment": "Payer during the coverage period"
         },
-        "CODE": {
-          "type": "BIGINT",
-          "comment": "Care plan code"
-        },
-        "DESCRIPTION": {
+        "ownership": {
           "type": "TEXT",
-          "comment": "Description of the care plan"
-        },
-        "REASONCODE": {
-          "type": "BIGINT",
-          "comment": "Reason code for the care plan"
-        },
-        "REASONDESCRIPTION": {
-          "type": "TEXT",
-          "comment": "Reason description for the care plan"
+          "comment": "Ownership type of the policy"
         }
       },
-      "primary_key": "Id"
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "payers",
+          "constrained_columns": [
+            "payer"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
     },
     "observations": {
       "columns": {
-        "DATE": {
+        "date": {
           "type": "TIMESTAMP",
           "comment": "Date of the observation"
         },
-        "PATIENT": {
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "encounter": {
           "type": "UUID",
           "comment": "Encounter associated with the observation"
         },
-        "CODE": {
+        "code": {
           "type": "TEXT",
           "comment": "Observation code"
         },
-        "DESCRIPTION": {
+        "description": {
           "type": "TEXT",
           "comment": "Observation description"
         },
-        "VALUE": {
+        "value": {
           "type": "TEXT",
           "comment": "Observed value"
         },
-        "UNITS": {
+        "units": {
           "type": "TEXT",
           "comment": "Units of the observed value"
         },
-        "TYPE": {
+        "type": {
           "type": "TEXT",
           "comment": "Type of observation"
         }
       },
-      "primary_key": null
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
     },
-    "conditions": {
+    "payers": {
       "columns": {
-        "START": {
-          "type": "DATE",
-          "comment": "Date when the condition was first noted"
+        "id": {
+          "type": "UUID",
+          "comment": "Primary key for the payer"
         },
-        "STOP": {
-          "type": "DATE",
-          "comment": "Date when the condition resolved"
+        "name": {
+          "type": "TEXT",
+          "comment": "Payer name"
         },
-        "PATIENT": {
+        "address": {
+          "type": "TEXT",
+          "comment": "Address of the payer"
+        },
+        "city": {
+          "type": "TEXT",
+          "comment": "City where the payer is located"
+        },
+        "state_headquartered": {
+          "type": "TEXT",
+          "comment": "State where payer is headquartered"
+        },
+        "zip": {
+          "type": "INTEGER",
+          "comment": "Zip code"
+        },
+        "phone": {
+          "type": "TEXT",
+          "comment": "Contact phone number"
+        },
+        "amount_covered": {
+          "type": "NUMERIC",
+          "comment": "Amount covered by the payer"
+        },
+        "amount_uncovered": {
+          "type": "NUMERIC",
+          "comment": "Amount not covered"
+        },
+        "revenue": {
+          "type": "NUMERIC",
+          "comment": "Total revenue of the payer"
+        },
+        "covered_encounters": {
+          "type": "NUMERIC",
+          "comment": "Number of encounters covered"
+        },
+        "uncovered_encounters": {
+          "type": "NUMERIC",
+          "comment": "Number of encounters not covered"
+        },
+        "covered_medications": {
+          "type": "NUMERIC",
+          "comment": "Number of medications covered"
+        },
+        "uncovered_medications": {
+          "type": "NUMERIC",
+          "comment": "Number of medications not covered"
+        },
+        "covered_procedures": {
+          "type": "NUMERIC",
+          "comment": "Number of procedures covered"
+        },
+        "uncovered_procedures": {
+          "type": "NUMERIC",
+          "comment": "Number of procedures not covered"
+        },
+        "covered_immunizations": {
+          "type": "NUMERIC",
+          "comment": "Number of immunizations covered"
+        },
+        "uncovered_immunizations": {
+          "type": "NUMERIC",
+          "comment": "Number of immunizations not covered"
+        },
+        "unique_customers": {
+          "type": "INTEGER",
+          "comment": "Count of unique customers"
+        },
+        "qols_avg": {
+          "type": "NUMERIC",
+          "comment": "Average quality of life score"
+        },
+        "member_months": {
+          "type": "INTEGER",
+          "comment": "Total member months"
+        }
+      },
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": []
+    },
+    "patients": {
+      "columns": {
+        "id": {
+          "type": "UUID",
+          "comment": "Primary key for the patient"
+        },
+        "birthdate": {
+          "type": "DATE",
+          "comment": "Date of birth"
+        },
+        "deathdate": {
+          "type": "DATE",
+          "comment": "Date of death"
+        },
+        "ssn": {
+          "type": "TEXT",
+          "comment": "Social security number"
+        },
+        "drivers": {
+          "type": "TEXT",
+          "comment": "Driver license number"
+        },
+        "passport": {
+          "type": "TEXT",
+          "comment": "Passport number"
+        },
+        "prefix": {
+          "type": "TEXT",
+          "comment": "Name prefix"
+        },
+        "first": {
+          "type": "TEXT",
+          "comment": "First name"
+        },
+        "last": {
+          "type": "TEXT",
+          "comment": "Last name"
+        },
+        "suffix": {
+          "type": "TEXT",
+          "comment": "Name suffix"
+        },
+        "maiden": {
+          "type": "TEXT",
+          "comment": "Maiden name"
+        },
+        "marital": {
+          "type": "TEXT",
+          "comment": "Marital status"
+        },
+        "race": {
+          "type": "TEXT",
+          "comment": "Race of the patient"
+        },
+        "ethnicity": {
+          "type": "TEXT",
+          "comment": "Ethnicity of the patient"
+        },
+        "gender": {
+          "type": "TEXT",
+          "comment": "Gender of the patient"
+        },
+        "birthplace": {
+          "type": "TEXT",
+          "comment": "Birthplace of the patient"
+        },
+        "address": {
+          "type": "TEXT",
+          "comment": "Street address"
+        },
+        "city": {
+          "type": "TEXT",
+          "comment": "City of residence"
+        },
+        "state": {
+          "type": "TEXT",
+          "comment": "State of residence"
+        },
+        "county": {
+          "type": "TEXT",
+          "comment": "County of residence"
+        },
+        "zip": {
+          "type": "INTEGER",
+          "comment": "Zip code"
+        },
+        "lat": {
+          "type": "NUMERIC",
+          "comment": "Latitude coordinate"
+        },
+        "lon": {
+          "type": "NUMERIC",
+          "comment": "Longitude coordinate"
+        },
+        "healthcare_expenses": {
+          "type": "NUMERIC",
+          "comment": "Total healthcare expenses"
+        },
+        "healthcare_coverage": {
+          "type": "NUMERIC",
+          "comment": "Total healthcare coverage amount"
+        }
+      },
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": []
+    },
+    "immunizations": {
+      "columns": {
+        "date": {
+          "type": "TIMESTAMP",
+          "comment": "Date the immunization was given"
+        },
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "encounter": {
+          "type": "UUID",
+          "comment": "Encounter during which the immunization occurred"
+        },
+        "code": {
+          "type": "INTEGER",
+          "comment": "Immunization code"
+        },
+        "description": {
+          "type": "TEXT",
+          "comment": "Description of the immunization"
+        },
+        "base_cost": {
+          "type": "NUMERIC",
+          "comment": "Base cost of the immunization"
+        }
+      },
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    "imaging_studies": {
+      "columns": {
+        "id": {
+          "type": "UUID",
+          "comment": "Primary key for the imaging study"
+        },
+        "date": {
+          "type": "TIMESTAMP",
+          "comment": "Date the imaging was performed"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "encounter": {
+          "type": "UUID",
+          "comment": "Encounter related to the imaging"
+        },
+        "bodysite_code": {
+          "type": "TEXT",
+          "comment": "Code for body site imaged"
+        },
+        "bodysite_description": {
+          "type": "TEXT",
+          "comment": "Description of the body site"
+        },
+        "modality_code": {
+          "type": "TEXT",
+          "comment": "Imaging modality code"
+        },
+        "modality_description": {
+          "type": "TEXT",
+          "comment": "Imaging modality description"
+        },
+        "sop_code": {
+          "type": "TEXT",
+          "comment": "SOP code for the image"
+        },
+        "sop_description": {
+          "type": "TEXT",
+          "comment": "SOP description for the image"
+        }
+      },
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    "devices": {
+      "columns": {
+        "stop": {
+          "type": "TIMESTAMP",
+          "comment": "Timestamp when the device was removed"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "encounter": {
+          "type": "UUID",
+          "comment": "Encounter associated with the device"
+        },
+        "code": {
+          "type": "INTEGER",
+          "comment": "Device code"
+        },
+        "description": {
+          "type": "TEXT",
+          "comment": "Description of the device"
+        },
+        "udi": {
+          "type": "TEXT",
+          "comment": "Unique device identifier"
+        },
+        "start": {
+          "type": "TIMESTAMP",
+          "comment": "Timestamp when the device was placed"
+        }
+      },
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    "conditions": {
+      "columns": {
+        "start": {
+          "type": "DATE",
+          "comment": "Date when the condition was first noted"
+        },
+        "stop": {
+          "type": "DATE",
+          "comment": "Date when the condition resolved"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "encounter": {
           "type": "UUID",
           "comment": "Encounter tied to the condition"
         },
-        "CODE": {
+        "code": {
           "type": "BIGINT",
           "comment": "Code for the diagnosis"
         },
-        "DESCRIPTION": {
+        "description": {
           "type": "TEXT",
           "comment": "Text description of the diagnosis"
         }
       },
-      "primary_key": null
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
     },
     "medications": {
       "columns": {
-        "START": {
+        "start": {
           "type": "TIMESTAMP",
           "comment": "Time medication was started"
         },
-        "STOP": {
+        "stop": {
           "type": "TIMESTAMP",
           "comment": "Time medication was stopped"
         },
-        "PATIENT": {
+        "patient": {
           "type": "UUID",
           "comment": "Identifier of the patient"
         },
-        "ENCOUNTER": {
+        "encounter": {
           "type": "UUID",
           "comment": "Encounter related to the medication"
         },
-        "CODE": {
+        "code": {
           "type": "INTEGER",
           "comment": "Medication code"
         },
-        "DESCRIPTION": {
+        "description": {
           "type": "TEXT",
           "comment": "Medication description"
         },
-        "BASE_COST": {
+        "base_cost": {
           "type": "NUMERIC",
           "comment": "Base medication cost"
         },
-        "PAYER_COVERAGE": {
+        "payer_coverage": {
           "type": "NUMERIC",
           "comment": "Amount covered by payer"
         },
-        "DISPENSES": {
+        "dispenses": {
           "type": "BIGINT",
           "comment": "Number of dispenses"
         },
-        "TOTALCOST": {
+        "totalcost": {
           "type": "NUMERIC",
           "comment": "Total medication cost"
         },
-        "REASONCODE": {
+        "reasoncode": {
           "type": "BIGINT",
           "comment": "Reason code for medication"
         },
-        "REASONDESCRIPTION": {
+        "reasondescription": {
           "type": "TEXT",
           "comment": "Reason description for medication"
         },
-        "PAYER": {
+        "payer": {
           "type": "UUID",
           "comment": "Payer responsible for medication"
         }
       },
-      "primary_key": null
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "payers",
+          "constrained_columns": [
+            "payer"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    "careplans": {
+      "columns": {
+        "id": {
+          "type": "UUID",
+          "comment": "Primary key for the care plan"
+        },
+        "start": {
+          "type": "DATE",
+          "comment": "Date the care plan started"
+        },
+        "stop": {
+          "type": "DATE",
+          "comment": "Date the care plan ended"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "encounter": {
+          "type": "UUID",
+          "comment": "Encounter associated with the plan"
+        },
+        "code": {
+          "type": "BIGINT",
+          "comment": "Care plan code"
+        },
+        "description": {
+          "type": "TEXT",
+          "comment": "Description of the care plan"
+        },
+        "reasoncode": {
+          "type": "BIGINT",
+          "comment": "Reason code for the care plan"
+        },
+        "reasondescription": {
+          "type": "TEXT",
+          "comment": "Reason description for the care plan"
+        }
+      },
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
+    },
+    "encounters": {
+      "columns": {
+        "id": {
+          "type": "UUID",
+          "comment": "Primary key for the encounter"
+        },
+        "start": {
+          "type": "TIMESTAMP",
+          "comment": "Time the encounter started"
+        },
+        "stop": {
+          "type": "TIMESTAMP",
+          "comment": "Time the encounter ended"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "organization": {
+          "type": "UUID",
+          "comment": "Organization providing care"
+        },
+        "provider": {
+          "type": "UUID",
+          "comment": "Primary provider for the encounter"
+        },
+        "payer": {
+          "type": "UUID",
+          "comment": "Payer responsible for the encounter"
+        },
+        "encounterclass": {
+          "type": "TEXT",
+          "comment": "Type of encounter"
+        },
+        "code": {
+          "type": "BIGINT",
+          "comment": "Encounter code"
+        },
+        "description": {
+          "type": "TEXT",
+          "comment": "Description of the encounter"
+        },
+        "base_encounter_cost": {
+          "type": "NUMERIC",
+          "comment": "Base cost of the encounter"
+        },
+        "total_claim_cost": {
+          "type": "NUMERIC",
+          "comment": "Total claim cost"
+        },
+        "payer_coverage": {
+          "type": "NUMERIC",
+          "comment": "Amount covered by the payer"
+        },
+        "reasoncode": {
+          "type": "BIGINT",
+          "comment": "Reason code for the encounter"
+        },
+        "reasondescription": {
+          "type": "TEXT",
+          "comment": "Reason description for the encounter"
+        }
+      },
+      "primary_key": "id",
+      "comment": null,
+      "foreign_keys": []
+    },
+    "allergies": {
+      "columns": {
+        "start": {
+          "type": "DATE",
+          "comment": "Date when the allergy episode began"
+        },
+        "stop": {
+          "type": "DATE",
+          "comment": "Date when the allergy episode resolved"
+        },
+        "patient": {
+          "type": "UUID",
+          "comment": "Identifier of the patient"
+        },
+        "encounter": {
+          "type": "UUID",
+          "comment": "Encounter during which the allergy was recorded"
+        },
+        "code": {
+          "type": "INTEGER",
+          "comment": "Code representing the allergy"
+        },
+        "description": {
+          "type": "TEXT",
+          "comment": "Human readable allergy description"
+        }
+      },
+      "primary_key": null,
+      "comment": null,
+      "foreign_keys": [
+        {
+          "referred_table": "encounters",
+          "constrained_columns": [
+            "encounter"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        },
+        {
+          "referred_table": "patients",
+          "constrained_columns": [
+            "patient"
+          ],
+          "referred_columns": [
+            "id"
+          ]
+        }
+      ]
     }
   }
 }
