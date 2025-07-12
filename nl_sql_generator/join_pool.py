@@ -9,6 +9,8 @@ from typing import Any, Dict, List
 
 from .prompt_builder import load_template_messages
 
+DEFAULT_PARALLELISM = 10
+
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
 from .autonomous_job import _clean_sql
@@ -37,7 +39,7 @@ class JoinPool:
     async def _schema_chunks(self) -> List[Dict[str, Any]]:
         """Return table subsets for each worker using GPT suggestions."""
 
-        n = int(self.cfg.get("parallelism", 1))
+        n = int(self.cfg.get("parallelism", DEFAULT_PARALLELISM))
         min_joins = int(self.cfg.get("min_joins", 2))
         extra = {"count": n, "min_joins": min_joins}
         self.log.info("Requesting %d joinable table sets", n)
