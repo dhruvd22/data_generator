@@ -11,8 +11,8 @@ Example:
     ['patients', 'appointments']
 """
 
-from dataclasses import dataclass
-from typing import Dict, List
+from dataclasses import dataclass, field
+from typing import Dict, List, Any
 from sqlalchemy import create_engine, inspect
 import os
 import json
@@ -52,6 +52,7 @@ class TableInfo:
     columns: List[ColumnInfo]
     primary_key: str | None = None
     comment: str | None = None
+    foreign_keys: List[Dict[str, Any]] = field(default_factory=list)
 
 
 class SchemaLoader:
@@ -95,7 +96,16 @@ class SchemaLoader:
             log.debug("Discovered columns for %s: %s", tbl, [c.name for c in cols])
             pk_cols = insp.get_pk_constraint(tbl).get("constrained_columns")
             pk = pk_cols[0] if pk_cols else None
-            schema[tbl] = TableInfo(tbl, cols, pk, t_comment)
+            fks = []
+            for fk in insp.get_foreign_keys(tbl):
+                fks.append(
+                    {
+                        "referred_table": fk.get("referred_table"),
+                        "constrained_columns": fk.get("constrained_columns") or [],
+                        "referred_columns": fk.get("referred_columns") or [],
+                    }
+                )
+            schema[tbl] = TableInfo(tbl, cols, pk, t_comment, fks)
         log.info("Loaded %d tables", len(schema))
 
         return schema
@@ -122,6 +132,7 @@ class SchemaLoader:
                 "columns": cols,
                 "primary_key": info.primary_key,
                 "comment": info.comment,
+                "foreign_keys": info.foreign_keys,
             }
         return {"tables": tables}
 
