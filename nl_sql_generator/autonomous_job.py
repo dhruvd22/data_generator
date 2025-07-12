@@ -292,7 +292,24 @@ class AutonomousJob:
             self.client,
         )
         pairs = await pool.generate()
-        return JobResult(task.get("question", ""), "", pairs)
+        checked: list[dict[str, str]] = []
+        n_rows = int(self.phase_cfg.get("n_rows", 5))
+        for p in pairs:
+            sql = _clean_sql(p.get("sql", ""))
+            ok, err = self.validator.check(sql)
+            if not ok:
+                log.warning("Validation failed for %s: %s", sql, err)
+                checked.append({"question": p.get("question", ""), "sql": "FAIL"})
+                continue
+            try:
+                self.writer.fetch(sql, n_rows)
+                checked.append({"question": p.get("question", ""), "sql": sql})
+                log.info("SQL validated successfully: %s", sql)
+            except Exception as err:
+                log.warning("Execution failed for %s: %s", sql, err)
+                checked.append({"question": p.get("question", ""), "sql": "FAIL"})
+
+        return JobResult(task.get("question", ""), "", checked)
 
     # ------------------------------------------------------------------
     # internal helpers
