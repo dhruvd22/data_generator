@@ -36,7 +36,7 @@ phases:
   - name: complex_sqls
     count: 10
     use_sample_rows: true
-    parallelism=50
+    parallelism: 50
     min_joins: 3
     dataset_output_file_dir: generated_datasets/complex_sqls
     tag_schema_json: false

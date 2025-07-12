@@ -75,3 +75,27 @@ def test_complex_pool_default_min_joins(monkeypatch):
     )
     asyncio.run(pool.generate())
     assert DummyWorker.last_cfg["min_joins"] == 3
+
+
+def test_complex_pool_uses_default_parallelism(monkeypatch):
+    captured = {}
+
+    def _load_template(_, __, ___, extra):
+        captured["count"] = extra.get("count")
+        return []
+
+    class _Client(DummyClient):
+        async def acomplete(self, *args, **kwargs):
+            return ""
+
+    monkeypatch.setattr(
+        "nl_sql_generator.complex_sql_pool.load_template_messages",
+        _load_template,
+    )
+    schema = {"a": {}, "b": {}}
+    writer = DummyWriter()
+    client = _Client()
+
+    pool = ComplexSqlPool(schema, {}, object, writer, None, client)
+    asyncio.run(pool._schema_chunks())
+    assert captured["count"] == 10

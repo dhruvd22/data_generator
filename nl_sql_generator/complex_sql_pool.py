@@ -8,6 +8,10 @@ import json
 import logging
 from typing import Any, Dict, List
 
+# Default concurrency used when ``parallelism`` is not provided via
+# phase configuration.
+DEFAULT_PARALLELISM = 10
+
 from .prompt_builder import load_template_messages
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
@@ -39,7 +43,7 @@ class ComplexSqlPool:
     async def _schema_chunks(self) -> List[Dict[str, Any]]:
         """Return table subsets for each worker using GPT suggestions."""
 
-        n = int(self.cfg.get("parallelism", 1))
+        n = int(self.cfg.get("parallelism", DEFAULT_PARALLELISM))
         min_joins = int(self.cfg.get("min_joins", 3))
         extra: Dict[str, Any] = {"count": n, "min_joins": min_joins}
 
