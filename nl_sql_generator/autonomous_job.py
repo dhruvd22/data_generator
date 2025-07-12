@@ -277,6 +277,23 @@ class AutonomousJob:
         pairs = await pool.generate()
         return JobResult(task.get("question", ""), "", pairs)
 
+    async def _run_complex_sqls_async(self, task: NLTask) -> JobResult:
+        """Generate NL/SQL pairs joining multiple tables with GPT-selected sets."""
+
+        from .complex_sql_pool import ComplexSqlPool
+        from .sql_validator import SQLValidator as ValCls
+
+        pool = ComplexSqlPool(
+            self.schema,
+            task.get("metadata", {}),
+            ValCls,
+            self.writer,
+            self.critic,
+            self.client,
+        )
+        pairs = await pool.generate()
+        return JobResult(task.get("question", ""), "", pairs)
+
     # ------------------------------------------------------------------
     # internal helpers
     # ------------------------------------------------------------------
@@ -361,6 +378,8 @@ class AutonomousJob:
             return await self._run_single_table_async(task)
         if task.get("phase") == "joins":
             return await self._run_joins_async(task)
+        if task.get("phase") == "complex_sqls":
+            return await self._run_complex_sqls_async(task)
 
         base_content = (
             "You are a data-engineer agent. "
