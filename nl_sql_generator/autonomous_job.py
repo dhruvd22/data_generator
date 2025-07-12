@@ -510,7 +510,7 @@ class AutonomousJob:
                                     self.writer.append_jsonl(pair, path)
                                     dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
-                        elif phase in {"single_table", "joins"} and res.rows:
+                        elif phase in {"single_table", "joins", "complex_sqls"} and res.rows:
                             for pair in res.rows:
                                 sql = _clean_sql(pair.get("sql", ""))
                                 if sql == "FAIL":
