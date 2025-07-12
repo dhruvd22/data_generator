@@ -49,9 +49,11 @@ flowchart TD
 3. Load phase tasks from the file.
 4. Introspect tables via `SchemaLoader`.
 5. Build prompts and query OpenAI.
-6. Validate SQL using `EXPLAIN`.
-7. Optionally let the critic fix bad SQL.
-8. Fetch anonymised rows and append to JSONL.
+6. For join-heavy phases `JoinPool` or `ComplexSqlPool` spawn workers
+   to explore table combinations.
+7. Validate SQL using `EXPLAIN`.
+8. Optionally let the critic fix bad SQL.
+9. Fetch anonymised rows and append to JSONL.
 
 ```mermaid
 flowchart TD
@@ -158,6 +160,7 @@ SELECT COUNT(*) FROM payers
 │   ├── worker_agent.py         # individual schema QA generator
 │   ├── join_pool.py            # coordinates join generation workers
 │   ├── join_worker.py          # produces multi-table SQL joins
+│   ├── complex_sql_pool.py     # larger join sets using GPT suggestions
 │   ├── schema_relationship.py  # infers relationships between tables
 │   ├── logger.py               # structured logging helpers
 │   ├── main.py                 # CLI entry points
