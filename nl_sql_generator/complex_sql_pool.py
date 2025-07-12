@@ -19,7 +19,7 @@ from .autonomous_job import _clean_sql
 
 
 class ComplexSqlPool:
-    """Generate join-based NL/SQL pairs using richer table selection."""
+    """Generate multi-table NL/SQL pairs using GPT selected table sets."""
 
     def __init__(
         self,
@@ -30,6 +30,17 @@ class ComplexSqlPool:
         critic,
         client: ResponsesClient,
     ) -> None:
+        """Instantiate the pool.
+
+        Args:
+            schema: Full database schema mapping.
+            phase_cfg: Configuration dictionary for the complex SQL phase.
+            validator_cls: Callable producing a validator instance for workers.
+            writer: :class:`ResultWriter` used to verify execution.
+            critic: :class:`Critic` used for SQL fixes.
+            client: Shared :class:`ResponsesClient` for OpenAI calls.
+        """
+
         self.schema = schema
         self.cfg = phase_cfg
         self.validator_cls = validator_cls
@@ -100,6 +111,11 @@ class ComplexSqlPool:
     async def _run_worker(
         self, batch_size: int, worker_id: int, schema_subset: Dict[str, Any]
     ) -> int:
+        """Run a :class:`JoinWorker` for ``schema_subset``.
+
+        The worker generates up to ``batch_size`` pairs and any new pairs are
+        merged into ``self.seen`` under a lock.
+        """
         cfg = dict(self.cfg)
         cfg.setdefault("min_joins", 3)
         if cfg.get("use_sample_rows"):
@@ -149,6 +165,8 @@ class ComplexSqlPool:
         return delta
 
     async def generate(self) -> List[Dict[str, str]]:
+        """Run workers until ``count`` pairs per worker have been produced."""
+
         per_worker = int(self.cfg.get("count", 1))
         schema_chunks = await self._schema_chunks()
         n_workers = len(schema_chunks)

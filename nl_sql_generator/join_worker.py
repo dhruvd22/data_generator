@@ -11,6 +11,8 @@ log = logging.getLogger(__name__)
 
 
 class JoinWorker:
+    """LLM-powered worker that produces join queries for a table subset."""
+
     def __init__(
         self,
         schema: Dict[str, Any],
@@ -21,6 +23,18 @@ class JoinWorker:
         wid: int,
         client: ResponsesClient,
     ) -> None:
+        """Create a worker tied to a schema slice.
+
+        Args:
+            schema: Mapping of tables visible to this worker.
+            cfg: Phase configuration with generation options.
+            validator_cls: Callable returning a validator instance.
+            critic: :class:`Critic` used to fix invalid SQL.
+            writer: :class:`ResultWriter` for executing SQL.
+            wid: Worker identifier used in logs.
+            client: Shared :class:`ResponsesClient` for OpenAI calls.
+        """
+
         self.schema = schema
         self.cfg = cfg
         self.validator = validator_cls()
@@ -43,6 +57,8 @@ class JoinWorker:
         return len(tables)
 
     async def generate(self, k: int) -> List[Dict[str, str]]:
+        """Return ``k`` validated join questions for this worker's tables."""
+
         log.info("Worker %d generating %d join pairs", self.wid, k)
         extra = {
             "count": k,

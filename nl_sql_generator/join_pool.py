@@ -1,4 +1,9 @@
-"""Orchestrate JoinWorker agents in parallel."""
+"""Orchestrate :class:`JoinWorker` agents in parallel.
+
+``JoinPool`` splits the database schema into smaller chunks and spawns
+workers for each subset.  It keeps track of all produced question/SQL
+pairs so duplicates are filtered across workers.
+"""
 
 import asyncio
 import math
@@ -17,6 +22,8 @@ from .autonomous_job import _clean_sql
 
 
 class JoinPool:
+    """High level coordinator for join-based question generation."""
+
     def __init__(
         self,
         schema: Dict[str, Any],
@@ -26,6 +33,16 @@ class JoinPool:
         critic,
         client: ResponsesClient,
     ) -> None:
+        """Create a pool instance.
+
+        Args:
+            schema: Mapping of table metadata for the entire database.
+            phase_cfg: Phase configuration controlling generation options.
+            validator_cls: Callable returning a validator used by workers.
+            writer: :class:`ResultWriter` instance for executing SQL.
+            critic: :class:`Critic` used to fix invalid SQL.
+            client: Shared :class:`ResponsesClient` for OpenAI calls.
+        """
         self.schema = schema
         self.cfg = phase_cfg
         self.validator_cls = validator_cls
@@ -82,6 +99,12 @@ class JoinPool:
     async def _run_worker(
         self, batch_size: int, worker_id: int, schema_subset: Dict[str, Any]
     ) -> int:
+        """Launch a single worker on ``schema_subset``.
+
+        Each worker generates ``batch_size`` pairs using a trimmed schema view.
+        Newly produced pairs are merged into ``self.seen`` under a lock so that
+        concurrent workers don't create duplicates.
+        """
         cfg = dict(self.cfg)
         if cfg.get("use_sample_rows"):
             n_rows = int(cfg.get("n_rows", 2))
@@ -130,6 +153,8 @@ class JoinPool:
         return delta
 
     async def generate(self) -> List[Dict[str, str]]:
+        """Run all workers until the desired number of pairs is reached."""
+
         per_worker = int(self.cfg.get("count", 1))
         schema_chunks = await self._schema_chunks()
         n_workers = len(schema_chunks)
