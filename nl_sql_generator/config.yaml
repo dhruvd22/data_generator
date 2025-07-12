@@ -34,11 +34,11 @@ phases:
     tag_schema_json: true
 
   - name: complex_sqls
-    count: 2
+    count: 10
     use_sample_rows: true
     min_joins: 3
     dataset_output_file_dir: generated_datasets/complex_sqls
-    tag_schema_json: true
+    tag_schema_json: false
 
   - name: sample_data
     n_rows: 2
