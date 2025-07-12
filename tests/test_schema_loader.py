@@ -22,6 +22,15 @@ class DummyInspector:
     def get_table_comment(self, table):
         return {"text": "tbl comment"}
 
+    def get_foreign_keys(self, table):
+        return [
+            {
+                "referred_table": "parent",
+                "constrained_columns": ["parent_id"],
+                "referred_columns": ["id"],
+            }
+        ]
+
 
 class DummyEngine:
     pass
@@ -39,3 +48,4 @@ def test_load_schema_with_comments(monkeypatch):
     info = schema["tbl"]
     assert info.comment == "tbl comment"
     assert info.columns[0].comment == "pk"
+    assert info.foreign_keys[0]["referred_table"] == "parent"
