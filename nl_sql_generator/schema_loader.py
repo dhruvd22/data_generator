@@ -128,6 +128,6 @@ class SchemaLoader:
 
 if __name__ == "__main__":
     # quick manual test
+    logging.basicConfig(level=logging.INFO)
     schema = SchemaLoader.load_schema()
-    log = logging.getLogger(__name__)
-    log.info(json.dumps(SchemaLoader.to_json(schema), indent=2))
+    print(json.dumps(SchemaLoader.to_json(schema), indent=2))
