@@ -153,6 +153,18 @@ def load_tasks(
             meta_with_count = {**meta, "count": count, "min_joins": min_joins}
             tasks.append({"phase": name, "question": q, "metadata": meta_with_count})
             continue
+        if name.lower() == "complex_sqls":
+            count = int(phase_def.get("count", 1))
+            min_joins = int(phase_def.get("min_joins", 3))
+            q = str(
+                phase_def.get(
+                    "question",
+                    f"Generate {count} complex question/SQL pairs requiring joins.",
+                )
+            )
+            meta_with_count = {**meta, "count": count, "min_joins": min_joins}
+            tasks.append({"phase": name, "question": q, "metadata": meta_with_count})
+            continue
         questions = phase_def.get("questions")
         if questions:
             for q in questions:

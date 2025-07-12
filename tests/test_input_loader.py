@@ -192,3 +192,19 @@ phases:
     meta = tasks[0]["metadata"]
     assert meta["count"] == 5
     assert meta["min_joins"] == 3
+
+def test_complex_sqls_phase(tmp_path):
+    cfg = """
+phases:
+  - name: complex_sqls
+    count: 4
+    min_joins: 5
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    tasks = load_tasks(str(path), {"t1": object(), "t2": object()})
+    assert len(tasks) == 1
+    meta = tasks[0]["metadata"]
+    assert meta["count"] == 4
+    assert meta["min_joins"] == 5

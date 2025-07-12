@@ -33,6 +33,13 @@ phases:
     dataset_output_file_dir: generated_datasets/joins
     tag_schema_json: true
 
+  - name: complex_sqls
+    count: 2
+    use_sample_rows: true
+    min_joins: 3
+    dataset_output_file_dir: generated_datasets/complex_sqls
+    tag_schema_json: true
+
   - name: sample_data
     n_rows: 2
     use_sample_rows: true
