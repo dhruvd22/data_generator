@@ -139,10 +139,14 @@ def test_single_table_multiple_pairs(tmp_path):
     )
 
     async def _rt(t):
-        return JobResult("", "", [
-            {"question": "Q1", "sql": "S1"},
-            {"question": "Q2", "sql": "S2"},
-        ])
+        return JobResult(
+            "",
+            "",
+            [
+                {"question": "Q1", "sql": "S1"},
+                {"question": "Q2", "sql": "S2"},
+            ],
+        )
 
     job.run_task = _rt
     t = {
@@ -164,10 +168,14 @@ def test_joins_multiple_pairs(tmp_path):
     )
 
     async def _rt(t):
-        return JobResult("", "", [
-            {"question": "JQ1", "sql": "JS1"},
-            {"question": "JQ2", "sql": "JS2"},
-        ])
+        return JobResult(
+            "",
+            "",
+            [
+                {"question": "JQ1", "sql": "JS1"},
+                {"question": "JQ2", "sql": "JS2"},
+            ],
+        )
 
     job.run_task = _rt
     t = {
@@ -182,6 +190,35 @@ def test_joins_multiple_pairs(tmp_path):
     ]
 
 
+def test_complex_sqls_multiple_pairs(tmp_path):
+    writer = DummyWriter()
+    job = AutonomousJob(
+        {}, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+    )
+
+    async def _rt(t):
+        return JobResult(
+            "",
+            "",
+            [
+                {"question": "CQ1", "sql": "CS1"},
+                {"question": "CQ2", "sql": "CS2"},
+            ],
+        )
+
+    job.run_task = _rt
+    t = {
+        "phase": "complex_sqls",
+        "question": "",
+        "metadata": {"dataset_output_file_dir": str(tmp_path)},
+    }
+    job.run_tasks([t])
+    assert writer.seen == [
+        {"question": "CQ1", "sql": "CS1"},
+        {"question": "CQ2", "sql": "CS2"},
+    ]
+
+
 def test_tag_schema_json(tmp_path):
     writer = DummyWriter()
     schema = {
@@ -192,7 +229,11 @@ def test_tag_schema_json(tmp_path):
         )
     }
     job = AutonomousJob(
-        schema, writer=writer, client=DummyClient(), validator=DummyValidator(), critic=None
+        schema,
+        writer=writer,
+        client=DummyClient(),
+        validator=DummyValidator(),
+        critic=None,
     )
 
     async def _rt(t):
