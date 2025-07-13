@@ -3,35 +3,35 @@ defaults:
   tag_schema_json: true
 phases:
   - name: builtins
-    count: 5
+    count: 25
     builtins: [COUNT, SUM, AVG, MIN, MAX, COALESCE, NULLIF, CONCAT, LENGTH, SUBSTRING, LOWER, UPPER, TRIM, REPLACE, EXTRACT, DATE_TRUNC, NOW, CURRENT_DATE, CURRENT_TIMESTAMP, AGE, TO_CHAR, ROUND, CEIL, FLOOR, MOD, ABS, ROW_NUMBER, RANK, LAG, LEAD]
     prompt_template: builtin_sql_template.txt
     use_sample_rows: true
     dataset_output_file_dir: generated_datasets/builtins
-    tag_schema_json: true
+    tag_schema_json: false
 
   - name: schema_docs
-    count: 100
+    count: 10000
     parallelism: 10
     prompt_template: schema_doc_template.txt
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs
-    tag_schema_json: true
+    tag_schema_json: false
 
 
   - name: single_table
-    count: 5
+    count: 100
     use_sample_rows: true
     prompt_template: single_table_sql_template.txt
     dataset_output_file_dir: generated_datasets/single_table
     tag_schema_json: true
 
   - name: joins
-    count: 2
+    count: 30
     use_sample_rows: true
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
-    tag_schema_json: true
+    tag_schema_json: false
 
   - name: complex_sqls
     count: 10
