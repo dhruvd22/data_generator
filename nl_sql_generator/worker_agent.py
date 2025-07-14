@@ -101,6 +101,18 @@ class WorkerAgent:
                 "Worker %d chat log enabled at %s", self.wid, self.chat_log_path
             )
 
+    def _log_message(self, msg: Dict[str, str]) -> None:
+        """Append ``msg`` to the chat history log if enabled."""
+        if not self.chat_log_path:
+            return
+        self.chat_history.append(msg)
+        try:
+            with open(self.chat_log_path, "a", encoding="utf-8") as fh:
+                json.dump(msg, fh)
+                fh.write("\n")
+        except Exception as err:  # pragma: no cover - logging only
+            log.warning("Worker %d failed to write chat log: %s", self.wid, err)
+
     async def generate(self, k: int) -> List[Dict[str, str]]:
         """Return ``k`` Q&A pairs generated from this worker's schema slice.
 
@@ -125,8 +137,8 @@ class WorkerAgent:
         messages: List[Dict[str, str]] = build_schema_doc_prompt(
             self.schema, k=first_request
         )
-        if self.chat_log_path:
-            self.chat_history.extend(messages)
+        for m in messages:
+            self._log_message(m)
         total: List[Dict[str, str]] = []
 
         attempts = 0
@@ -141,8 +153,7 @@ class WorkerAgent:
                 if len(total) >= k:
                     break
             messages.append(msg)
-            if self.chat_log_path:
-                self.chat_history.append(msg)
+            self._log_message(msg)
             attempts += 1
             if len(total) >= k:
                 break
@@ -161,8 +172,7 @@ class WorkerAgent:
                     "content": f"Generate {remaining} more question-answer pairs about the schema.",
                 }
                 messages.append(follow)
-                if self.chat_log_path:
-                    self.chat_history.append(follow)
+                self._log_message(follow)
 
         if len(total) < k:
             log.warning(
@@ -175,10 +185,6 @@ class WorkerAgent:
         else:
             log.info("Worker %d produced %d pairs", self.wid, len(total))
         if self.chat_log_path:
-            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
-                for m in self.chat_history:
-                    json.dump(m, fh)
-                    fh.write("\n")
             log.info(
                 "Worker %d chat history saved to %s", self.wid, self.chat_log_path
             )

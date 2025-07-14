@@ -57,6 +57,18 @@ class JoinWorker:
                 "Join worker %d chat log enabled at %s", self.wid, self.chat_log_path
             )
 
+    def _log_message(self, msg: Dict[str, str]) -> None:
+        """Append ``msg`` to the chat history log if enabled."""
+        if not self.chat_log_path:
+            return
+        self.chat_history.append(msg)
+        try:
+            with open(self.chat_log_path, "a", encoding="utf-8") as fh:
+                json.dump(msg, fh)
+                fh.write("\n")
+        except Exception as err:  # pragma: no cover - logging only
+            log.warning("Join worker %d failed to write chat log: %s", self.wid, err)
+
     def _join_table_count(self, sql: str) -> int:
         """Return number of tables referenced via FROM/JOIN clauses."""
         pattern = re.compile(r"\b(?:FROM|JOIN)\s+([\w\.\"`]+)", re.IGNORECASE)
@@ -83,16 +95,15 @@ class JoinWorker:
         messages = load_template_messages(
             "join_sql_template.txt", self.schema, "", extra
         )
-        if self.chat_log_path:
-            self.chat_history.extend(messages)
+        for m in messages:
+            self._log_message(m)
         log.info(
             "Worker %d sending prompt with tables %s",
             self.wid,
             list(self.schema),
         )
         message = await self.client.acomplete(messages, return_message=True)
-        if self.chat_log_path:
-            self.chat_history.append(message)
+        self._log_message(message)
         pairs = _parse_pairs(message.get("content", ""))
         results: List[Dict[str, str]] = []
         min_joins = int(self.cfg.get("min_joins", 2))
@@ -121,10 +132,6 @@ class JoinWorker:
                     log.warning("Worker %d execution failed: %s", self.wid, err)
         log.info("Worker %d produced %d valid pairs", self.wid, len(results))
         if self.chat_log_path:
-            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
-                for m in self.chat_history:
-                    json.dump(m, fh)
-                    fh.write("\n")
             log.info(
                 "Join worker %d chat history saved to %s",
                 self.wid,
