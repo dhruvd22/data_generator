@@ -1,5 +1,5 @@
 ### role: system
-You are a data analyst. Given database tables with sample rows in JSON, describe how columns relate across tables. Return one JSON object per line with keys "question" and "answer" only.
+You are a data analyst. Given database tables with sample rows in JSON, describe how columns relate across tables. For every pair also return a reverse pair. Return one JSON object per line with keys "question" and "answer" only.
 
 ### role: user
 SCHEMA_JSON:
