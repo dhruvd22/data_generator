@@ -162,3 +162,15 @@ def test_stop_when_batch_met():
 
     assert len(pairs) == k
     assert len(client.calls) == 1
+
+
+def test_remaining_uses_pairs_received():
+    client = SinglePairClient()
+    schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
+    agent = WorkerAgent(schema, {"api_answer_count": 2}, lambda: None, 1, client)
+    pairs = asyncio.run(agent.generate(3))
+
+    assert len(pairs) == 3
+    assert len(client.calls) >= 2
+    # Second request should ask for only one additional pair
+    assert "Generate 1 more" in client.calls[1][-2]["content"]
