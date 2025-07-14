@@ -198,6 +198,7 @@ Environment variables:
 - `DATABASE_URL` – PostgreSQL connection string
 - `OPENAI_API_KEY` – OpenAI credentials
 - `DG_PARALLELISM` – optional override for helper agents
+- `DB_COCURRENT_SESSION` – connection pool size for SQL validation (default 50)
 
 ## Logging, Testing & CI
 - Logs live in `logs/` with one file per run. Single-table and schema-doc
