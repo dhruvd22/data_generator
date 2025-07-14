@@ -168,7 +168,11 @@ class WorkerAgent:
             if len(total) >= k:
                 break
             if attempts < max_attempts:
-                remaining = max(0, min(api_count - len(pairs), k - len(total)))
+                if len(pairs) < api_count:
+                    remaining = api_count - len(pairs)
+                else:
+                    remaining = api_count
+                remaining = max(0, min(remaining, k - len(total)))
                 log.info(
                     "Worker %d received %d pairs, requesting %d more (%d/%d remaining)",
                     self.wid,
