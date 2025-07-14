@@ -61,7 +61,8 @@ def test_fk_relationship(monkeypatch):
         "b": TableInfo("b", [ColumnInfo("id", "int")], "id"),
     }
     rels = asyncio.run(discover_relationships(schema, DummyEngine()))
-    assert rels[0]["relationship"] == "a.b_id -> b.id"
+    assert rels[0]["answer"] == "a.b_id -> b.id"
+    assert rels[1]["answer"] == "b.id -> a.b_id"
 
 
 def test_heuristic_relationship(monkeypatch):
@@ -84,7 +85,8 @@ def test_heuristic_relationship(monkeypatch):
         "b": TableInfo("b", [ColumnInfo("id", "int", "pk")], "id", "tbl b"),
     }
     rels = asyncio.run(discover_relationships(schema, DummyEngine()))
-    assert rels[0]["relationship"] == "a.b_id -> b.id"
+    assert rels[0]["answer"] == "a.b_id -> b.id"
+    assert rels[1]["answer"] == "b.id -> a.b_id"
 
 
 def test_distinct_ratio_called(monkeypatch):
