@@ -23,8 +23,10 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
             continue
         # Drop common list prefixes like "-" or "1." and code fence ticks
         line = line.lstrip("-*0123456789. ").strip("`")
-        if line:
-            lines.append(line)
+        # Skip chatter like "Here are the pairs:" which breaks JSON parsing
+        if not line or line[0] not in "[{]}":
+            continue
+        lines.append(line)
 
     cleaned = "\n".join(lines)
     pairs: List[Dict[str, str]] = []

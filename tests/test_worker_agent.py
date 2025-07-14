@@ -94,6 +94,21 @@ def test_parse_pairs_json_array():
     ]
 
 
+def test_parse_pairs_with_preamble():
+    text = """Sure, here are some pairs:
+```json
+[
+  {"question": "Q1", "answer": "A1"},
+  {"question": "Q2", "answer": "A2"}
+]
+```"""
+    pairs = _parse_pairs(text)
+    assert pairs == [
+        {"question": "Q1", "answer": "A1"},
+        {"question": "Q2", "answer": "A2"},
+    ]
+
+
 def test_generate_multiple_requests():
     client = DummyClient()
     schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
