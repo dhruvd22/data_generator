@@ -8,29 +8,48 @@ log = logging.getLogger(__name__)
 
 
 def _parse_pairs(text: str) -> List[Dict[str, str]]:
-    """Return valid JSON objects from ``text`` one per line.
+    """Return valid JSON objects from ``text``.
 
-    The OpenAI API sometimes prefixes responses with formatting such as
-    Markdown fences or bullet lists.  This helper filters such noise and
-    quietly skips lines that fail ``json.loads`` so that callers only see
-    well-formed ``{"question": ..., "answer": ...}`` dictionaries.
+    The OpenAI API often returns one JSON object per line but may also
+    respond with a JSON array or wrap the pairs inside another object. This
+    helper tries a few strategies to recover the pairs while skipping any
+    malformed lines or surrounding markdown/numbering noise.
     """
 
-    pairs: List[Dict[str, str]] = []
+    lines: List[str] = []
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("```"):
             continue
         # Drop common list prefixes like "-" or "1." and code fence ticks
         line = line.lstrip("-*0123456789. ").strip("`")
-        if not line:
-            continue
-        try:
-            obj = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if isinstance(obj, dict):
+        if line:
+            lines.append(line)
+
+    cleaned = "\n".join(lines)
+    pairs: List[Dict[str, str]] = []
+
+    # First try parsing the cleaned text as a single JSON structure
+    try:
+        obj = json.loads(cleaned)
+        if isinstance(obj, dict) and "pairs" in obj and isinstance(obj["pairs"], list):
+            obj = obj["pairs"]
+        if isinstance(obj, list):
+            for item in obj:
+                if isinstance(item, dict):
+                    pairs.append(item)
+        elif isinstance(obj, dict):
             pairs.append(obj)
+    except json.JSONDecodeError:
+        # Fallback to line-by-line parsing
+        for line in lines:
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(obj, dict):
+                pairs.append(obj)
+
     log.debug("Parsed %d QA pairs", len(pairs))
     return pairs
 
