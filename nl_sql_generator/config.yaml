@@ -13,6 +13,7 @@ phases:
   - name: schema_docs
     count: 8000
     parallelism: 400
+    api_answer_count: 10
     prompt_template: schema_doc_template.txt
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs

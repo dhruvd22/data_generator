@@ -67,13 +67,46 @@ class WorkerAgent:
         self.client = client
 
     async def generate(self, k: int) -> List[Dict[str, str]]:
-        """Return ``k`` Q&A pairs generated from this worker's schema slice."""
+        """Return ``k`` Q&A pairs generated from this worker's schema slice.
 
-        log.info("Worker %d generating %d pairs", self.wid, k)
-        prompt = build_schema_doc_prompt(self.schema, k=k)
-        completion = await self.client.acomplete(
-            prompt, model=self.cfg.get("openai_model")
+        The initial request uses ``api_answer_count`` from the configuration to
+        limit the number of pairs returned.  The conversation history is then
+        reused with follow-up prompts requesting the same number of pairs until
+        ``k`` total pairs have been collected.  The schema definition is only
+        included in the first request to save tokens.
+        """
+
+        api_count = int(self.cfg.get("api_answer_count", k))
+        log.info(
+            "Worker %d generating %d pairs using api_answer_count=%d",
+            self.wid,
+            k,
+            api_count,
         )
-        pairs = _parse_pairs(completion)
-        log.info("Worker %d produced %d pairs", self.wid, len(pairs))
-        return pairs
+
+        messages: List[Dict[str, str]] = build_schema_doc_prompt(
+            self.schema, k=api_count
+        )
+        total: List[Dict[str, str]] = []
+
+        while len(total) < k:
+            msg = await self.client.acomplete(
+                messages, return_message=True, model=self.cfg.get("openai_model")
+            )
+            text = msg.get("content", "") if isinstance(msg, dict) else str(msg)
+            pairs = _parse_pairs(text)
+            for p in pairs:
+                total.append(p)
+                if len(total) >= k:
+                    break
+            messages.append(msg)
+            if len(total) < k:
+                messages.append(
+                    {
+                        "role": "user",
+                        "content": f"Generate {api_count} more question-answer pairs about the schema.",
+                    }
+                )
+
+        log.info("Worker %d produced %d pairs", self.wid, len(total))
+        return total[:k]
