@@ -177,6 +177,19 @@ def test_remaining_uses_pairs_received():
     assert "Generate 1 more" in client.calls[1][-2]["content"]
 
 
+def test_full_batch_requests_next_batch():
+    api_count = 2
+    k = api_count * 2
+    client = FullBatchClient(api_count)
+    schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
+    agent = WorkerAgent(schema, {"api_answer_count": api_count}, lambda: None, 1, client)
+    pairs = asyncio.run(agent.generate(k))
+
+    assert len(pairs) == k
+    assert len(client.calls) == 2
+    assert f"Generate {api_count} more" in client.calls[1][-2]["content"]
+
+
 def test_chat_log_created(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     client = SinglePairClient()
