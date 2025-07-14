@@ -150,7 +150,8 @@ The `config.yaml` file defines several phases used when creating datasets:
 
 - **builtins** – showcase individual SQL functions on a single table.
 - **schema_docs** – generate question/answer pairs describing the schema.
-- **single_table** – create NL/SQL examples querying a single table.
+- **single_table** – create NL/SQL examples querying a single table. Uses
+  `api_answer_count` to limit how many pairs each API call returns.
 - **joins** – produce questions that join multiple tables together.
 - **complex_sqls** – larger join queries based on GPT suggested table sets.
 - **sample_data** – export anonymised sample rows from each table.
@@ -196,7 +197,8 @@ Environment variables:
 - `DG_PARALLELISM` – optional override for helper agents
 
 ## Logging, Testing & CI
-- Logs live in `logs/` with one file per run.
+- Logs live in `logs/` with one file per run. Single-table and schema-doc
+  workers report progress and batch requests in the log.
 - Run tests with:
   ```bash
   pytest -q
