@@ -86,14 +86,14 @@ class WorkerAgent:
             api_count,
         )
 
+        first_request = min(api_count, k)
         messages: List[Dict[str, str]] = build_schema_doc_prompt(
-            self.schema, k=api_count
+            self.schema, k=first_request
         )
         total: List[Dict[str, str]] = []
 
         attempts = 0
         while len(total) < k and attempts < max_attempts:
-            remaining = min(api_count, k - len(total))
             msg = await self.client.acomplete(
                 messages, return_message=True, model=self.cfg.get("openai_model")
             )
@@ -106,6 +106,7 @@ class WorkerAgent:
             messages.append(msg)
             attempts += 1
             if len(total) < k and attempts < max_attempts:
+                remaining = min(api_count, k - len(total))
                 messages.append(
                     {
                         "role": "user",
