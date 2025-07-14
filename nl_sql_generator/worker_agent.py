@@ -105,7 +105,9 @@ class WorkerAgent:
                     break
             messages.append(msg)
             attempts += 1
-            if len(total) < k and attempts < max_attempts:
+            if len(total) >= k:
+                break
+            if attempts < max_attempts:
                 remaining = min(api_count, k - len(total))
                 messages.append(
                     {
