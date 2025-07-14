@@ -217,16 +217,26 @@ class AutonomousJob:
         return JobResult(task.get("question", ""), "", pairs)
 
     async def _run_single_table_async(self, task: NLTask) -> JobResult:
-        """Generate multiple NL/SQL pairs for a single table."""
+        """Generate multiple NL/SQL pairs for a single table.
+
+        The request is broken into batches controlled by ``api_answer_count`` so
+        that the worker can keep asking for additional pairs until ``count`` is
+        reached.  This mirrors the behaviour of the schema documentation workers
+        and avoids very long single prompts.
+        """
 
         from .worker_agent import _parse_pairs
+
         table = task.get("metadata", {}).get("table")
         if not table or table not in self.schema:
             return JobResult(task.get("question", ""), "", [])
 
         k = int(task.get("metadata", {}).get("count", 1))
         subset = {table: self.schema[table]}
-        extra = {"table": table, "count": k}
+        api_count = int(self.phase_cfg.get("api_answer_count", k))
+        max_attempts = int(self.phase_cfg.get("max_attempts", 6))
+
+        extra = {"table": table, "count": min(api_count, k)}
         if self.phase_cfg.get("use_sample_rows"):
             n = int(self.phase_cfg.get("n_rows", 5))
             try:
@@ -235,30 +245,69 @@ class AutonomousJob:
             except Exception as err:
                 log.warning("Failed fetching sample rows for %s: %s", table, err)
 
-        messages = build_prompt(task.get("question", ""), subset, {**self.phase_cfg, **extra})
+        messages = build_prompt(
+            task.get("question", ""), subset, {**self.phase_cfg, **extra}
+        )
         if not isinstance(messages, list):
             messages = [
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": messages},
             ]
-        text = await self.client.acomplete(messages)
-        pairs = _parse_pairs(text)
+
+        log.info(
+            "Generating %d single-table pairs using api_answer_count=%d",
+            k,
+            api_count,
+        )
+
+        results: list[dict[str, str]] = []
+        attempts = 0
         n_rows = int(self.phase_cfg.get("n_rows", 5))
-        for p in pairs:
-            if "sql" in p:
-                sql = _clean_sql(p["sql"])
-                ok, err = self.validator.check(sql)
-                if not ok:
-                    log.warning("SQL validation failed: %s", err)
-                    p["sql"] = "FAIL"
-                    continue
-                try:
-                    self.writer.fetch(sql, n_rows)
-                    p["sql"] = sql
-                except Exception as err:
-                    log.warning("Execution failed for %s: %s", sql, err)
-                    p["sql"] = "FAIL"
-        return JobResult(task.get("question", ""), "", pairs)
+
+        while len(results) < k and attempts < max_attempts:
+            msg = await self.client.acomplete(messages, return_message=True)
+            msg_dict = msg if isinstance(msg, dict) else msg.model_dump()
+            pairs = _parse_pairs(msg_dict.get("content", ""))
+
+            for p in pairs:
+                if len(results) >= k:
+                    break
+                if "sql" in p:
+                    sql = _clean_sql(p["sql"])
+                    ok, err = self.validator.check(sql)
+                    if not ok:
+                        log.warning("SQL validation failed: %s", err)
+                        p["sql"] = "FAIL"
+                    else:
+                        try:
+                            self.writer.fetch(sql, n_rows)
+                            p["sql"] = sql
+                        except Exception as err:
+                            log.warning("Execution failed for %s: %s", sql, err)
+                            p["sql"] = "FAIL"
+                results.append(p)
+
+            messages.append(msg_dict)
+            attempts += 1
+            if len(results) >= k:
+                break
+            if attempts < max_attempts:
+                remaining = max(0, min(api_count, k - len(results)))
+                follow = {
+                    "role": "user",
+                    "content": f"Generate {remaining} more question-SQL pairs about the table.",
+                }
+                messages.append(follow)
+
+        if len(results) < k:
+            log.warning(
+                "Only %d/%d single-table pairs produced after %d attempts",
+                len(results),
+                k,
+                attempts,
+            )
+
+        return JobResult(task.get("question", ""), "", results[:k])
 
     async def _run_joins_async(self, task: NLTask) -> JobResult:
         """Generate NL/SQL pairs that join multiple tables."""
@@ -391,7 +440,9 @@ class AutonomousJob:
             return await self._run_schema_docs_async(task)
         if task.get("phase") == "schema_relationship":
             return await self._run_schema_relationship_async(task)
-        if task.get("phase") == "single_table" and task.get("metadata", {}).get("count"):
+        if task.get("phase") == "single_table" and task.get("metadata", {}).get(
+            "count"
+        ):
             return await self._run_single_table_async(task)
         if task.get("phase") == "joins":
             return await self._run_joins_async(task)
@@ -527,7 +578,10 @@ class AutonomousJob:
                                     self.writer.append_jsonl(pair, path)
                                     dedup[path].add(key)
                             log.info("Wrote schema QA pairs to %s", path)
-                        elif phase in {"single_table", "joins", "complex_sqls"} and res.rows:
+                        elif (
+                            phase in {"single_table", "joins", "complex_sqls"}
+                            and res.rows
+                        ):
                             for pair in res.rows:
                                 sql = _clean_sql(pair.get("sql", ""))
                                 if sql == "FAIL":
@@ -541,7 +595,9 @@ class AutonomousJob:
                                     }
                                     if t.get("metadata", {}).get("tag_schema_json"):
                                         tables = self._extract_tables(sql)
-                                        log.info("Tagging schema for tables: %s", tables)
+                                        log.info(
+                                            "Tagging schema for tables: %s", tables
+                                        )
                                         row["schema"] = self._schema_subset_json(tables)
                                     self.writer.append_jsonl(row, path)
                                     dedup[path].add(key)
@@ -558,7 +614,9 @@ class AutonomousJob:
                                     row = {"question": res.question, "sql": res.sql}
                                     if t.get("metadata", {}).get("tag_schema_json"):
                                         tables = self._extract_tables(res.sql)
-                                        log.info("Tagging schema for tables: %s", tables)
+                                        log.info(
+                                            "Tagging schema for tables: %s", tables
+                                        )
                                         row["schema"] = self._schema_subset_json(tables)
                                     self.writer.append_jsonl(row, path)
                                     dedup[path].add(key)
