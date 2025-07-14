@@ -17,6 +17,7 @@ fine-tuning or evaluation.
   - [Evaluation & Monitoring](#evaluation--monitoring)
 - [Quick-Start Guide](#quick-start-guide)
 - [Detailed Usage](#detailed-usage)
+- [Generation Phases](#generation-phases)
 - [Repository Structure](#repository-structure)
 - [Configuration & Secrets Management](#configuration--secrets-management)
 - [Logging, Testing & CI](#logging-testing--ci)
@@ -143,6 +144,19 @@ Expected output:
 SELECT COUNT(*) FROM payers
 [{"count": 123}]
 ```
+
+## Generation Phases
+The `config.yaml` file defines several phases used when creating datasets:
+
+- **builtins** – showcase individual SQL functions on a single table.
+- **schema_docs** – generate question/answer pairs describing the schema.
+- **single_table** – create NL/SQL examples querying a single table.
+- **joins** – produce questions that join multiple tables together.
+- **complex_sqls** – larger join queries based on GPT suggested table sets.
+- **sample_data** – export anonymised sample rows from each table.
+- **schema_relationship** – discover potential relationships between tables.
+
+Select a phase via `--phase` or by passing the name to `load_tasks`.
 
 ## Repository Structure
 ```text
