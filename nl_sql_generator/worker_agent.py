@@ -78,6 +78,7 @@ class WorkerAgent:
         """
 
         api_count = int(self.cfg.get("api_answer_count", k))
+        max_attempts = int(self.cfg.get("max_attempts", 6))
         log.info(
             "Worker %d generating %d pairs using api_answer_count=%d",
             self.wid,
@@ -90,7 +91,9 @@ class WorkerAgent:
         )
         total: List[Dict[str, str]] = []
 
-        while len(total) < k:
+        attempts = 0
+        while len(total) < k and attempts < max_attempts:
+            remaining = min(api_count, k - len(total))
             msg = await self.client.acomplete(
                 messages, return_message=True, model=self.cfg.get("openai_model")
             )
@@ -101,13 +104,23 @@ class WorkerAgent:
                 if len(total) >= k:
                     break
             messages.append(msg)
-            if len(total) < k:
+            attempts += 1
+            if len(total) < k and attempts < max_attempts:
                 messages.append(
                     {
                         "role": "user",
-                        "content": f"Generate {api_count} more question-answer pairs about the schema.",
+                        "content": f"Generate {remaining} more question-answer pairs about the schema.",
                     }
                 )
 
-        log.info("Worker %d produced %d pairs", self.wid, len(total))
+        if len(total) < k:
+            log.warning(
+                "Worker %d produced only %d/%d pairs after %d attempts",
+                self.wid,
+                len(total),
+                k,
+                attempts,
+            )
+        else:
+            log.info("Worker %d produced %d pairs", self.wid, len(total))
         return total[:k]
