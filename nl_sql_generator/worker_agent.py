@@ -72,8 +72,9 @@ class WorkerAgent:
         The initial request uses ``api_answer_count`` from the configuration to
         limit the number of pairs returned.  The conversation history is then
         reused with follow-up prompts requesting the same number of pairs until
-        ``k`` total pairs have been collected.  The schema definition is only
-        included in the first request to save tokens.
+        ``k`` total pairs have been collected.  The schema definition (and any
+        sample rows if supplied) is included only in the very first request so
+        it does not get appended every time the chat history is resent.
         """
 
         api_count = int(self.cfg.get("api_answer_count", k))
