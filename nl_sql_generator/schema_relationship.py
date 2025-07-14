@@ -322,10 +322,20 @@ async def discover_relationships(
                 results.append(
                     {
                         "question": f"How is {table}.{lc} related to {rt}.{rc}?",
-                        "relationship": rel,
+                        "answer": rel,
                         "confidence": 1.0,
                     }
                 )
+                rev_rel = f"{rt}.{rc} -> {table}.{lc}"
+                if rev_rel not in seen:
+                    seen.add(rev_rel)
+                    results.append(
+                        {
+                            "question": f"How is {rt}.{rc} related to {table}.{lc}?",
+                            "answer": rev_rel,
+                            "confidence": 1.0,
+                        }
+                    )
 
     # gather column info
 
@@ -415,16 +425,25 @@ async def discover_relationships(
 
         rel = f"{ftbl}.{fcol.name} -> {rtbl}.{pk}"
         async with lock:
-            if rel in seen:
-                return
-            seen.add(rel)
-            results.append(
-                {
-                    "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{pk}?",
-                    "relationship": rel,
-                    "confidence": score / 6,
-                }
-            )
+            if rel not in seen:
+                seen.add(rel)
+                results.append(
+                    {
+                        "question": f"How is {ftbl}.{fcol.name} related to {rtbl}.{pk}?",
+                        "answer": rel,
+                        "confidence": score / 6,
+                    }
+                )
+            rev_rel = f"{rtbl}.{pk} -> {ftbl}.{fcol.name}"
+            if rev_rel not in seen:
+                seen.add(rev_rel)
+                results.append(
+                    {
+                        "question": f"How is {rtbl}.{pk} related to {ftbl}.{fcol.name}?",
+                        "answer": rev_rel,
+                        "confidence": score / 6,
+                    }
+                )
 
     tasks = []
     for ftbl, finfo in schema.items():
@@ -467,16 +486,25 @@ async def discover_relationships(
             continue
         child, parent, col, pk = m.groups()
         rel = f"{child}.{col} -> {parent}.{pk}"
-        if rel in seen:
-            continue
-        seen.add(rel)
-        results.append(
-            {
-                "question": f"How is {child}.{col} related to {parent}.{pk}?",
-                "relationship": rel,
-                "confidence": 0.5,
-            }
-        )
+        if rel not in seen:
+            seen.add(rel)
+            results.append(
+                {
+                    "question": f"How is {child}.{col} related to {parent}.{pk}?",
+                    "answer": rel,
+                    "confidence": 0.5,
+                }
+            )
+        rev_rel = f"{parent}.{pk} -> {child}.{col}"
+        if rev_rel not in seen:
+            seen.add(rev_rel)
+            results.append(
+                {
+                    "question": f"How is {parent}.{pk} related to {child}.{col}?",
+                    "answer": rev_rel,
+                    "confidence": 0.5,
+                }
+            )
 
     results.sort(key=lambda r: r["confidence"], reverse=True)
     log.info("Discovered %d relationships", len(results))
