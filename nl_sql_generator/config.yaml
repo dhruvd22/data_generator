@@ -11,8 +11,8 @@ phases:
     tag_schema_json: false
 
   - name: schema_docs
-    count: 10000
-    parallelism: 10
+    count: 8000
+    parallelism: 400
     prompt_template: schema_doc_template.txt
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs
@@ -21,6 +21,7 @@ phases:
 
   - name: single_table
     count: 100
+    parallelism: 50
     use_sample_rows: true
     prompt_template: single_table_sql_template.txt
     dataset_output_file_dir: generated_datasets/single_table
@@ -28,6 +29,7 @@ phases:
 
   - name: joins
     count: 30
+    parallelism: 30
     use_sample_rows: true
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
