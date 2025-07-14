@@ -4,7 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 log = logging.getLogger(__name__)
 
@@ -91,15 +91,22 @@ class WorkerAgent:
 
         self.chat_history: List[Dict[str, str]] = []
         self.chat_log_path: str | None = None
+        self._chat_log_fh: Optional[Any] = None
         if self.cfg.get("enable_worker_chat_log"):
             os.makedirs("logs", exist_ok=True)
             ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-            self.chat_log_path = os.path.join(
-                "logs", f"worker-{self.wid}-{ts}.jsonl"
-            )
-            log.info(
-                "Worker %d chat log enabled at %s", self.wid, self.chat_log_path
-            )
+            self.chat_log_path = os.path.join("logs", f"worker-{self.wid}-{ts}.jsonl")
+            self._chat_log_fh = open(self.chat_log_path, "w", encoding="utf-8")
+            log.info("Worker %d chat log enabled at %s", self.wid, self.chat_log_path)
+
+    def _write_chat(self, messages: List[Dict[str, str]]) -> None:
+        """Append ``messages`` to the chat log file if enabled."""
+        if not self._chat_log_fh:
+            return
+        for m in messages:
+            json.dump(m, self._chat_log_fh)
+            self._chat_log_fh.write("\n")
+        self._chat_log_fh.flush()
 
     async def generate(self, k: int) -> List[Dict[str, str]]:
         """Return ``k`` Q&A pairs generated from this worker's schema slice.
@@ -127,6 +134,7 @@ class WorkerAgent:
         )
         if self.chat_log_path:
             self.chat_history.extend(messages)
+            self._write_chat(messages)
         total: List[Dict[str, str]] = []
 
         attempts = 0
@@ -143,6 +151,7 @@ class WorkerAgent:
             messages.append(msg)
             if self.chat_log_path:
                 self.chat_history.append(msg)
+                self._write_chat([msg])
             attempts += 1
             if len(total) >= k:
                 break
@@ -163,6 +172,7 @@ class WorkerAgent:
                 messages.append(follow)
                 if self.chat_log_path:
                     self.chat_history.append(follow)
+                    self._write_chat([follow])
 
         if len(total) < k:
             log.warning(
@@ -174,12 +184,7 @@ class WorkerAgent:
             )
         else:
             log.info("Worker %d produced %d pairs", self.wid, len(total))
-        if self.chat_log_path:
-            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
-                for m in self.chat_history:
-                    json.dump(m, fh)
-                    fh.write("\n")
-            log.info(
-                "Worker %d chat history saved to %s", self.wid, self.chat_log_path
-            )
+        if self._chat_log_fh:
+            self._chat_log_fh.close()
+            log.info("Worker %d chat history saved to %s", self.wid, self.chat_log_path)
         return total[:k]
