@@ -151,8 +151,11 @@ The `config.yaml` file defines several phases used when creating datasets:
 - **builtins** – showcase individual SQL functions on a single table.
 - **schema_docs** – generate question/answer pairs describing the schema.
 - **single_table** – create NL/SQL examples querying a single table. Uses
-  `api_answer_count` to limit how many pairs each API call returns.
-- **joins** – produce questions that join multiple tables together.
+  `api_answer_count` to limit how many pairs each API call returns while workers
+  keep chat history across requests. Agents run concurrently based on
+  `parallelism`.
+- **joins** – produce questions that join multiple tables together. Join workers
+  also respect `api_answer_count` and run in parallel to speed up generation.
 - **complex_sqls** – larger join queries based on GPT suggested table sets.
 - **sample_data** – export anonymised sample rows from each table.
 - **schema_relationship** – discover potential relationships between tables.

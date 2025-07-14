@@ -96,8 +96,10 @@ class JoinWorker:
         """Return ``k`` validated join questions for this worker's tables."""
 
         log.info("Worker %d generating %d join pairs", self.wid, k)
+        api_count = int(self.cfg.get("api_answer_count", k))
+        max_attempts = int(self.cfg.get("max_attempts", 6))
         extra = {
-            "count": k,
+            "count": min(api_count, k),
             "min_joins": self.cfg.get("min_joins", 2),
         }
         if "sample_rows" in self.cfg:
@@ -113,38 +115,60 @@ class JoinWorker:
             self.wid,
             list(self.schema),
         )
-        message = await self.client.acomplete(messages, return_message=True)
-        msg_dict = self._to_dict(message)
-        if self.chat_log_path:
-            self.chat_history.append(msg_dict)
-            self._write_chat([msg_dict])
-        pairs = _parse_pairs(msg_dict.get("content", ""))
-        results: List[Dict[str, str]] = []
+        total: List[Dict[str, str]] = []
+        attempts = 0
+        n_rows = int(self.cfg.get("n_rows", 5))
         min_joins = int(self.cfg.get("min_joins", 2))
-        for p in pairs:
-            q = p.get("question", "")
-            sql = _clean_sql(p.get("sql", ""))
-            attempts = 0
-            while attempts <= 2:
-                ok, err = self.validator.check(sql)
-                if ok:
+
+        while len(total) < k and attempts < max_attempts:
+            message = await self.client.acomplete(messages, return_message=True)
+            msg_dict = self._to_dict(message)
+            if self.chat_log_path:
+                self.chat_history.append(msg_dict)
+                self._write_chat([msg_dict])
+            pairs = _parse_pairs(msg_dict.get("content", ""))
+            for p in pairs:
+                if len(total) >= k:
                     break
-                log.warning("Worker %d validation failed: %s", self.wid, err)
-                if attempts >= 2:
-                    sql = None
-                    break
-                fix = await self.critic.areview(
-                    q, sql, _schema_as_markdown(self.schema)
-                )
-                sql = _clean_sql(fix.get("fixed_sql", sql))
-                attempts += 1
-            if sql and ok and self._join_table_count(sql) >= min_joins:
-                try:
-                    self.writer.fetch(sql, int(self.cfg.get("n_rows", 5)))
-                    results.append({"question": q, "sql": sql})
-                except Exception as err:
-                    log.warning("Worker %d execution failed: %s", self.wid, err)
-        log.info("Worker %d produced %d valid pairs", self.wid, len(results))
+                q = p.get("question", "")
+                sql = _clean_sql(p.get("sql", ""))
+                attempts_v = 0
+                while attempts_v <= 2:
+                    ok, err = self.validator.check(sql)
+                    if ok:
+                        break
+                    log.warning("Worker %d validation failed: %s", self.wid, err)
+                    if attempts_v >= 2:
+                        sql = None
+                        break
+                    fix = await self.critic.areview(
+                        q, sql, _schema_as_markdown(self.schema)
+                    )
+                    sql = _clean_sql(fix.get("fixed_sql", sql))
+                    attempts_v += 1
+                if sql and ok and self._join_table_count(sql) >= min_joins:
+                    try:
+                        self.writer.fetch(sql, n_rows)
+                        total.append({"question": q, "sql": sql})
+                    except Exception as err:
+                        log.warning("Worker %d execution failed: %s", self.wid, err)
+
+            messages.append(msg_dict)
+            attempts += 1
+            if len(total) >= k:
+                break
+            if attempts < max_attempts:
+                remaining = max(0, min(api_count, k - len(total)))
+                follow = {
+                    "role": "user",
+                    "content": f"Generate {remaining} more question-SQL pairs about the tables.",
+                }
+                messages.append(follow)
+                if self.chat_log_path:
+                    self.chat_history.append(follow)
+                    self._write_chat([follow])
+
+        log.info("Worker %d produced %d valid pairs", self.wid, len(total))
         if self._chat_log_fh:
             self._chat_log_fh.close()
             log.info(
@@ -152,4 +176,4 @@ class JoinWorker:
                 self.wid,
                 self.chat_log_path,
             )
-        return results
+        return total[:k]
