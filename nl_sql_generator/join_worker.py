@@ -3,7 +3,7 @@ import json
 import os
 from datetime import datetime
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from .openai_responses import ResponsesClient
 from .prompt_builder import load_template_messages, _schema_as_markdown
 from .worker_agent import _parse_pairs
@@ -47,15 +47,26 @@ class JoinWorker:
 
         self.chat_history: List[Dict[str, str]] = []
         self.chat_log_path: str | None = None
+        self._chat_log_fh: Optional[Any] = None
         if self.cfg.get("enable_worker_chat_log"):
             os.makedirs("logs", exist_ok=True)
             ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
             self.chat_log_path = os.path.join(
                 "logs", f"join-worker-{self.wid}-{ts}.jsonl"
             )
+            self._chat_log_fh = open(self.chat_log_path, "w", encoding="utf-8")
             log.info(
                 "Join worker %d chat log enabled at %s", self.wid, self.chat_log_path
             )
+
+    def _write_chat(self, messages: List[Dict[str, str]]) -> None:
+        """Append ``messages`` to the chat log file if enabled."""
+        if not self._chat_log_fh:
+            return
+        for m in messages:
+            json.dump(m, self._chat_log_fh)
+            self._chat_log_fh.write("\n")
+        self._chat_log_fh.flush()
 
     def _join_table_count(self, sql: str) -> int:
         """Return number of tables referenced via FROM/JOIN clauses."""
@@ -85,6 +96,7 @@ class JoinWorker:
         )
         if self.chat_log_path:
             self.chat_history.extend(messages)
+            self._write_chat(messages)
         log.info(
             "Worker %d sending prompt with tables %s",
             self.wid,
@@ -93,6 +105,7 @@ class JoinWorker:
         message = await self.client.acomplete(messages, return_message=True)
         if self.chat_log_path:
             self.chat_history.append(message)
+            self._write_chat([message])
         pairs = _parse_pairs(message.get("content", ""))
         results: List[Dict[str, str]] = []
         min_joins = int(self.cfg.get("min_joins", 2))
@@ -120,11 +133,8 @@ class JoinWorker:
                 except Exception as err:
                     log.warning("Worker %d execution failed: %s", self.wid, err)
         log.info("Worker %d produced %d valid pairs", self.wid, len(results))
-        if self.chat_log_path:
-            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
-                for m in self.chat_history:
-                    json.dump(m, fh)
-                    fh.write("\n")
+        if self._chat_log_fh:
+            self._chat_log_fh.close()
             log.info(
                 "Join worker %d chat history saved to %s",
                 self.wid,
