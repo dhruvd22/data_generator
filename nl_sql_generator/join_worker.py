@@ -1,5 +1,7 @@
 import logging
 import json
+import os
+from datetime import datetime
 import re
 from typing import Any, Dict, List
 from .openai_responses import ResponsesClient
@@ -43,6 +45,18 @@ class JoinWorker:
         self.wid = wid
         self.client = client
 
+        self.chat_history: List[Dict[str, str]] = []
+        self.chat_log_path: str | None = None
+        if self.cfg.get("enable_worker_chat_log"):
+            os.makedirs("logs", exist_ok=True)
+            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            self.chat_log_path = os.path.join(
+                "logs", f"join-worker-{self.wid}-{ts}.jsonl"
+            )
+            log.info(
+                "Join worker %d chat log enabled at %s", self.wid, self.chat_log_path
+            )
+
     def _join_table_count(self, sql: str) -> int:
         """Return number of tables referenced via FROM/JOIN clauses."""
         pattern = re.compile(r"\b(?:FROM|JOIN)\s+([\w\.\"`]+)", re.IGNORECASE)
@@ -69,13 +83,17 @@ class JoinWorker:
         messages = load_template_messages(
             "join_sql_template.txt", self.schema, "", extra
         )
+        if self.chat_log_path:
+            self.chat_history.extend(messages)
         log.info(
             "Worker %d sending prompt with tables %s",
             self.wid,
             list(self.schema),
         )
-        completion = await self.client.acomplete(messages)
-        pairs = _parse_pairs(completion)
+        message = await self.client.acomplete(messages, return_message=True)
+        if self.chat_log_path:
+            self.chat_history.append(message)
+        pairs = _parse_pairs(message.get("content", ""))
         results: List[Dict[str, str]] = []
         min_joins = int(self.cfg.get("min_joins", 2))
         for p in pairs:
@@ -102,4 +120,14 @@ class JoinWorker:
                 except Exception as err:
                     log.warning("Worker %d execution failed: %s", self.wid, err)
         log.info("Worker %d produced %d valid pairs", self.wid, len(results))
+        if self.chat_log_path:
+            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
+                for m in self.chat_history:
+                    json.dump(m, fh)
+                    fh.write("\n")
+            log.info(
+                "Join worker %d chat history saved to %s",
+                self.wid,
+                self.chat_log_path,
+            )
         return results
