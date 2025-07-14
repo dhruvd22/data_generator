@@ -32,6 +32,20 @@ class DummyClient:
         return text
 
 
+class CountingClient(DummyClient):
+    def __init__(self):
+        self.calls = []
+
+    async def acomplete(self, messages, return_message=False, model=None):
+        self.calls.append(messages)
+        text = json.dumps(
+            {"question": f"Q{len(self.calls)}", "sql": "SELECT * FROM a JOIN b"}
+        )
+        if return_message:
+            return {"role": "assistant", "content": text}
+        return text
+
+
 def test_chat_log_created(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     schema = {
@@ -52,3 +66,23 @@ def test_chat_log_created(tmp_path, monkeypatch):
     assert len(log_files) == 1
     data = [json.loads(l) for l in log_files[0].read_text().splitlines()]
     assert any(m["role"] == "assistant" for m in data)
+
+
+def test_api_answer_count(monkeypatch):
+    schema = {
+        "a": TableInfo("a", [ColumnInfo("id", "int")]),
+        "b": TableInfo("b", [ColumnInfo("id", "int")]),
+    }
+    client = CountingClient()
+    worker = JoinWorker(
+        schema,
+        {"api_answer_count": 1},
+        DummyValidator,
+        DummyCritic(),
+        DummyWriter(),
+        1,
+        client,
+    )
+    pairs = asyncio.run(worker.generate(2))
+    assert len(pairs) == 2
+    assert len(client.calls) == 2
