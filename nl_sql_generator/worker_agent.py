@@ -109,6 +109,14 @@ class WorkerAgent:
                 break
             if attempts < max_attempts:
                 remaining = min(api_count, k - len(total))
+                log.info(
+                    "Worker %d received %d pairs, requesting %d more (%d/%d remaining)",
+                    self.wid,
+                    len(pairs),
+                    remaining,
+                    k - len(total),
+                    k,
+                )
                 messages.append(
                     {
                         "role": "user",
