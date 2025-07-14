@@ -87,10 +87,11 @@ def cli() -> None:
     schema = SchemaLoader.load_schema()
 
     client = ResponsesClient(model=cfg["openai_model"], budget_usd=cfg["budget_usd"])
+    db_sessions = cfg.get("defaults", {}).get("db_cocurrent_session", 50)
     job = AutonomousJob(
         schema,
         client=client,
-        validator=SQLValidator(),
+        validator=SQLValidator(pool_size=db_sessions),
         critic=Critic(client=client),
         writer=ResultWriter(),
     )
@@ -122,10 +123,11 @@ def gen(
     schema = SchemaLoader.load_schema()
 
     client = ResponsesClient(model=cfg["openai_model"], budget_usd=cfg["budget_usd"])
+    db_sessions = cfg.get("defaults", {}).get("db_cocurrent_session", 50)
     job = AutonomousJob(
         schema,
         client=client,
-        validator=SQLValidator(),
+        validator=SQLValidator(pool_size=db_sessions),
         critic=Critic(client=client),
         writer=ResultWriter(),
     )

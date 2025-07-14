@@ -20,11 +20,12 @@ log = logging.getLogger(__name__)
 class SQLValidator:
     """Run ``EXPLAIN`` and a lightweight execution to verify SQL."""
 
-    def __init__(self, db_url: str | None = None):
+    def __init__(self, db_url: str | None = None, pool_size: int | None = None):
         """Initialise the validator.
 
         Args:
             db_url: Optional database URL, otherwise ``DATABASE_URL`` env is used.
+            pool_size: Connection pool size for concurrent validations.
 
         Raises:
             ValueError: If no database URL is provided.
@@ -35,8 +36,14 @@ class SQLValidator:
         self.db_url = (db_url or os.getenv("DATABASE_URL", "")).strip()
         if not self.db_url:
             raise ValueError("DATABASE_URL not set")
+        if pool_size is None:
+            pool_size = int(os.getenv("DB_COCURRENT_SESSION", "50"))
         self.eng = create_engine(
-            self.db_url, pool_pre_ping=True, connect_args={"sslmode": "require"}
+            self.db_url,
+            pool_pre_ping=True,
+            pool_size=pool_size,
+            max_overflow=0,
+            connect_args={"sslmode": "require"},
         )
 
     def check(self, sql: str) -> tuple[bool, str | None]:
