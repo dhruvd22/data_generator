@@ -2,7 +2,6 @@
 
 import json
 import logging
-import re
 from typing import Any, Dict, List
 
 log = logging.getLogger(__name__)
@@ -18,15 +17,14 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
     """
 
     lines: List[str] = []
-    bullet_prefix = re.compile(r"^(?:[-*]\s*|\d+[).:]?\s*)")
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("```"):
             continue
-        # Drop common list prefixes like "-" or "1)" and code fence ticks
-        line = bullet_prefix.sub("", line).strip("`")
+        # Drop common list prefixes like "-" or "1." and code fence ticks
+        line = line.lstrip("-*0123456789. ").strip("`")
         # Skip chatter like "Here are the pairs:" which breaks JSON parsing
-        if not line or line[0] not in "[{":
+        if not line or line[0] not in "[{]}":
             continue
         lines.append(line)
 
@@ -45,38 +43,21 @@ def _parse_pairs(text: str) -> List[Dict[str, str]]:
         elif isinstance(obj, dict):
             pairs.append(obj)
     except json.JSONDecodeError:
-        # Fallback to line-by-line parsing and regex extraction
+        # Fallback to line-by-line parsing
         for line in lines:
             try:
                 obj = json.loads(line)
-                if isinstance(obj, dict):
-                    pairs.append(obj)
-                continue
             except json.JSONDecodeError:
-                pass
-            for match in re.finditer(r"\{[^{}]*\}", line):
-                try:
-                    obj = json.loads(match.group(0))
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(obj, dict):
-                    pairs.append(obj)
-
-        if not pairs:
-            for match in re.finditer(r"\{[^{}]*\}", cleaned):
-                try:
-                    obj = json.loads(match.group(0))
-                except json.JSONDecodeError:
-                    continue
-                if isinstance(obj, dict):
-                    pairs.append(obj)
+                continue
+            if isinstance(obj, dict):
+                pairs.append(obj)
 
     log.debug("Parsed %d QA pairs", len(pairs))
     return pairs
 
 
 from .prompt_builder import build_schema_doc_prompt  # noqa: E402
-from .openai_responses import ResponsesClient, _truncate_schema_lines  # noqa: E402
+from .openai_responses import ResponsesClient  # noqa: E402
 
 
 class WorkerAgent:
@@ -134,16 +115,10 @@ class WorkerAgent:
 
         attempts = 0
         while len(total) < k and attempts < max_attempts:
-            log.debug(
-                "Worker %d prompt: %s",
-                self.wid,
-                _truncate_schema_lines(messages[-1].get("content", "")),
-            )
             msg = await self.client.acomplete(
                 messages, return_message=True, model=self.cfg.get("openai_model")
             )
             text = msg.get("content", "") if isinstance(msg, dict) else str(msg)
-            log.debug("Worker %d received: %s", self.wid, text)
             pairs = _parse_pairs(text)
             for p in pairs:
                 total.append(p)
