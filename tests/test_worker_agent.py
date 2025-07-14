@@ -109,6 +109,15 @@ def test_parse_pairs_with_preamble():
     ]
 
 
+def test_parse_pairs_with_paren_bullets():
+    text = "1) {\"question\": \"Q1\", \"answer\": \"A1\"}\n2) {\"question\": \"Q2\", \"answer\": \"A2\"}"
+    pairs = _parse_pairs(text)
+    assert pairs == [
+        {"question": "Q1", "answer": "A1"},
+        {"question": "Q2", "answer": "A2"},
+    ]
+
+
 def test_generate_multiple_requests():
     client = DummyClient()
     schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
