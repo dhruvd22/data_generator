@@ -29,6 +29,14 @@ class SinglePairClient(DummyClient):
         return text
 
 
+class EmptyClient(DummyClient):
+    async def acomplete(self, messages, return_message=False, model=None):
+        self.calls.append(messages)
+        if return_message:
+            return {"role": "assistant", "content": ""}
+        return ""
+
+
 def test_parse_pairs_basic():
     text = '{"question": "Q1", "answer": "A1"}\n{"question": "Q2", "answer": "A2"}'
     pairs = _parse_pairs(text)
@@ -87,3 +95,21 @@ def test_schema_included_once_per_call():
             "SCHEMA_JSON" in m.get("content", "") for m in call
         )
         assert schema_mentions == 1
+
+
+def test_generate_respects_max_attempts():
+    client = EmptyClient()
+    schema = {
+        "t": TableInfo("t", [ColumnInfo("id", "int")])
+    }
+    agent = WorkerAgent(
+        schema,
+        {"api_answer_count": 2, "max_attempts": 2},
+        lambda: None,
+        1,
+        client,
+    )
+    pairs = asyncio.run(agent.generate(3))
+
+    assert pairs == []
+    assert len(client.calls) == 2
