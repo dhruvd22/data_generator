@@ -99,12 +99,23 @@ class WorkerAgent:
             self._chat_log_fh = open(self.chat_log_path, "w", encoding="utf-8")
             log.info("Worker %d chat log enabled at %s", self.wid, self.chat_log_path)
 
-    def _write_chat(self, messages: List[Dict[str, str]]) -> None:
+    def _to_dict(self, msg: Any) -> Dict[str, Any]:
+        """Return ``msg`` as a plain dictionary."""
+        if isinstance(msg, dict):
+            return msg
+        if hasattr(msg, "model_dump"):
+            return msg.model_dump()
+        return {
+            "role": getattr(msg, "role", ""),
+            "content": getattr(msg, "content", str(msg)),
+        }
+
+    def _write_chat(self, messages: List[Any]) -> None:
         """Append ``messages`` to the chat log file if enabled."""
         if not self._chat_log_fh:
             return
         for m in messages:
-            json.dump(m, self._chat_log_fh)
+            json.dump(self._to_dict(m), self._chat_log_fh)
             self._chat_log_fh.write("\n")
         self._chat_log_fh.flush()
 
@@ -142,16 +153,17 @@ class WorkerAgent:
             msg = await self.client.acomplete(
                 messages, return_message=True, model=self.cfg.get("openai_model")
             )
-            text = msg.get("content", "") if isinstance(msg, dict) else str(msg)
+            msg_dict = self._to_dict(msg)
+            text = msg_dict.get("content", "")
             pairs = _parse_pairs(text)
             for p in pairs:
                 total.append(p)
                 if len(total) >= k:
                     break
-            messages.append(msg)
+            messages.append(msg_dict)
             if self.chat_log_path:
-                self.chat_history.append(msg)
-                self._write_chat([msg])
+                self.chat_history.append(msg_dict)
+                self._write_chat([msg_dict])
             attempts += 1
             if len(total) >= k:
                 break

@@ -59,12 +59,23 @@ class JoinWorker:
                 "Join worker %d chat log enabled at %s", self.wid, self.chat_log_path
             )
 
-    def _write_chat(self, messages: List[Dict[str, str]]) -> None:
+    def _to_dict(self, msg: Any) -> Dict[str, Any]:
+        """Return ``msg`` as a plain dictionary."""
+        if isinstance(msg, dict):
+            return msg
+        if hasattr(msg, "model_dump"):
+            return msg.model_dump()
+        return {
+            "role": getattr(msg, "role", ""),
+            "content": getattr(msg, "content", str(msg)),
+        }
+
+    def _write_chat(self, messages: List[Any]) -> None:
         """Append ``messages`` to the chat log file if enabled."""
         if not self._chat_log_fh:
             return
         for m in messages:
-            json.dump(m, self._chat_log_fh)
+            json.dump(self._to_dict(m), self._chat_log_fh)
             self._chat_log_fh.write("\n")
         self._chat_log_fh.flush()
 
@@ -103,10 +114,11 @@ class JoinWorker:
             list(self.schema),
         )
         message = await self.client.acomplete(messages, return_message=True)
+        msg_dict = self._to_dict(message)
         if self.chat_log_path:
-            self.chat_history.append(message)
-            self._write_chat([message])
-        pairs = _parse_pairs(message.get("content", ""))
+            self.chat_history.append(msg_dict)
+            self._write_chat([msg_dict])
+        pairs = _parse_pairs(msg_dict.get("content", ""))
         results: List[Dict[str, str]] = []
         min_joins = int(self.cfg.get("min_joins", 2))
         for p in pairs:
