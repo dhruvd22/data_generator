@@ -18,6 +18,7 @@ phases:
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs
     tag_schema_json: false
+    enable_worker_chat_log: true
 
 
   - name: single_table
