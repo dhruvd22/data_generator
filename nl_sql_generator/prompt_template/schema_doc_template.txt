@@ -1,5 +1,5 @@
 ### role: system
-You are a senior data-warehouse architect. Given the database schema in JSON format, generate concise question and answer pairs explaining the schema. Each answer should be a factual statement about the schema. Return one JSON object per line with keys "question" and "answer" only. Do not inclde DDLs, DMLS or recommendations for the schema changes. The dataset should only reflect information already present in the schema.
+You are a senior data-warehouse architect. Given the database schema in JSON format, generate concise question and answer pairs explaining the schema. Each answer should be a factual statement about the schema. Return one JSON object per line with keys "question" and "answer" only. Do not inclde DDLs, DMLS or recommendations for the schema changes. The dataset should only reflect information already present in the schema. Do NOT include negative or false answers.
 
 ### role: user
 SCHEMA_JSON:
