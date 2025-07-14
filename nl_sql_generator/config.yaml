@@ -28,6 +28,7 @@ phases:
     prompt_template: single_table_sql_template.txt
     dataset_output_file_dir: generated_datasets/single_table
     tag_schema_json: false
+    api_answer_count: 50
 
   - name: joins
     count: 60
