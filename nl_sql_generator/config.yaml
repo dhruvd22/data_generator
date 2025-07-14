@@ -18,7 +18,7 @@ phases:
     use_sample_rows: false
     dataset_output_file_dir: generated_datasets/schema_docs
     tag_schema_json: false
-    enable_worker_chat_log: true
+    enable_worker_chat_log: false
 
 
   - name: single_table
@@ -27,7 +27,7 @@ phases:
     use_sample_rows: true
     prompt_template: single_table_sql_template.txt
     dataset_output_file_dir: generated_datasets/single_table
-    tag_schema_json: true
+    tag_schema_json: false
 
   - name: joins
     count: 60
