@@ -1,5 +1,6 @@
 import asyncio
 
+import json
 from nl_sql_generator.worker_agent import _parse_pairs, WorkerAgent
 from nl_sql_generator.schema_loader import TableInfo, ColumnInfo
 
@@ -174,3 +175,21 @@ def test_remaining_uses_pairs_received():
     assert len(client.calls) >= 2
     # Second request should ask for only one additional pair
     assert "Generate 1 more" in client.calls[1][-2]["content"]
+
+
+def test_chat_log_created(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    client = SinglePairClient()
+    schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
+    agent = WorkerAgent(
+        schema,
+        {"api_answer_count": 1, "enable_worker_chat_log": True},
+        lambda: None,
+        1,
+        client,
+    )
+    asyncio.run(agent.generate(1))
+    log_files = list((tmp_path / "logs").glob("worker-1-*.jsonl"))
+    assert len(log_files) == 1
+    lines = log_files[0].read_text().splitlines()
+    assert lines and any(json.loads(l)["role"] == "assistant" for l in lines)

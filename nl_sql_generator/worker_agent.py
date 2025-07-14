@@ -2,6 +2,8 @@
 
 import json
 import logging
+import os
+from datetime import datetime
 from typing import Any, Dict, List
 
 log = logging.getLogger(__name__)
@@ -87,6 +89,18 @@ class WorkerAgent:
         self.wid = wid
         self.client = client
 
+        self.chat_history: List[Dict[str, str]] = []
+        self.chat_log_path: str | None = None
+        if self.cfg.get("enable_worker_chat_log"):
+            os.makedirs("logs", exist_ok=True)
+            ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            self.chat_log_path = os.path.join(
+                "logs", f"worker-{self.wid}-{ts}.jsonl"
+            )
+            log.info(
+                "Worker %d chat log enabled at %s", self.wid, self.chat_log_path
+            )
+
     async def generate(self, k: int) -> List[Dict[str, str]]:
         """Return ``k`` Q&A pairs generated from this worker's schema slice.
 
@@ -111,6 +125,8 @@ class WorkerAgent:
         messages: List[Dict[str, str]] = build_schema_doc_prompt(
             self.schema, k=first_request
         )
+        if self.chat_log_path:
+            self.chat_history.extend(messages)
         total: List[Dict[str, str]] = []
 
         attempts = 0
@@ -125,6 +141,8 @@ class WorkerAgent:
                 if len(total) >= k:
                     break
             messages.append(msg)
+            if self.chat_log_path:
+                self.chat_history.append(msg)
             attempts += 1
             if len(total) >= k:
                 break
@@ -138,12 +156,13 @@ class WorkerAgent:
                     k - len(total),
                     k,
                 )
-                messages.append(
-                    {
-                        "role": "user",
-                        "content": f"Generate {remaining} more question-answer pairs about the schema.",
-                    }
-                )
+                follow = {
+                    "role": "user",
+                    "content": f"Generate {remaining} more question-answer pairs about the schema.",
+                }
+                messages.append(follow)
+                if self.chat_log_path:
+                    self.chat_history.append(follow)
 
         if len(total) < k:
             log.warning(
@@ -155,4 +174,12 @@ class WorkerAgent:
             )
         else:
             log.info("Worker %d produced %d pairs", self.wid, len(total))
+        if self.chat_log_path:
+            with open(self.chat_log_path, "w", encoding="utf-8") as fh:
+                for m in self.chat_history:
+                    json.dump(m, fh)
+                    fh.write("\n")
+            log.info(
+                "Worker %d chat history saved to %s", self.wid, self.chat_log_path
+            )
         return total[:k]
