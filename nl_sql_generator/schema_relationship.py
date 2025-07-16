@@ -286,6 +286,7 @@ async def discover_relationships(
     engine,
     sample_limit: int = 5000,
     parallelism: int = 4,
+    pool_size: int | None = None,
 ) -> List[Dict[str, Any]]:
     """Return discovered relationships sorted by confidence."""
     log.info("Starting relationship discovery with sample_limit=%d", sample_limit)
@@ -300,7 +301,7 @@ async def discover_relationships(
             db_url = url.render_as_string(hide_password=False)
         else:  # pragma: no cover - fallback for custom URL objects
             db_url = str(url)
-        validator = SQLValidator(db_url)
+        validator = SQLValidator(db_url, pool_size=pool_size)
     results: List[Dict[str, Any]] = []
     seen: set[str] = set()
 

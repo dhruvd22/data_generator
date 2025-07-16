@@ -3,6 +3,7 @@ import json
 import os
 from datetime import datetime
 import re
+import asyncio
 from typing import Any, Dict, List, Optional
 from .openai_responses import ResponsesClient
 from .prompt_builder import load_template_messages, _schema_as_markdown
@@ -134,7 +135,7 @@ class JoinWorker:
                 sql = _clean_sql(p.get("sql", ""))
                 attempts_v = 0
                 while attempts_v <= 2:
-                    ok, err = self.validator.check(sql)
+                    ok, err = await asyncio.to_thread(self.validator.check, sql)
                     if ok:
                         break
                     log.warning("Worker %d validation failed: %s", self.wid, err)

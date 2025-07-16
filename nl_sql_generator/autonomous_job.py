@@ -91,6 +91,7 @@ class AutonomousJob:
         validator: SQLValidator | None = None,
         critic: Critic | None = None,
         writer: ResultWriter | None = None,
+        pool_size: int | None = None,
     ) -> None:
         """Create a new job instance.
 
@@ -106,7 +107,8 @@ class AutonomousJob:
         self.schema = schema
         self.phase_cfg = phase_cfg or {}
         self.client = client or ResponsesClient()
-        self.validator = validator or SQLValidator()
+        self.pool_size = pool_size or int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        self.validator = validator or SQLValidator(pool_size=self.pool_size)
         self.critic = critic or Critic(client=self.client)
         self.writer = writer or ResultWriter()
         self._write_lock = asyncio.Lock()
@@ -213,6 +215,7 @@ class AutonomousJob:
             self.schema,
             self.writer.eng,
             sample_limit=n_rows,
+            pool_size=self.pool_size,
         )
         return JobResult(task.get("question", ""), "", pairs)
 
@@ -274,7 +277,7 @@ class AutonomousJob:
                     break
                 if "sql" in p:
                     sql = _clean_sql(p["sql"])
-                    ok, err = self.validator.check(sql)
+                    ok, err = await asyncio.to_thread(self.validator.check, sql)
                     if not ok:
                         log.warning("SQL validation failed: %s", err)
                         p["sql"] = "FAIL"
@@ -315,10 +318,12 @@ class AutonomousJob:
         from .join_pool import JoinPool
         from .sql_validator import SQLValidator as ValCls
 
+        from functools import partial
+
         pool = JoinPool(
             self.schema,
             task.get("metadata", {}),
-            ValCls,
+            partial(ValCls, pool_size=self.pool_size),
             self.writer,
             self.critic,
             self.client,
@@ -332,10 +337,12 @@ class AutonomousJob:
         from .complex_sql_pool import ComplexSqlPool
         from .sql_validator import SQLValidator as ValCls
 
+        from functools import partial
+
         pool = ComplexSqlPool(
             self.schema,
             task.get("metadata", {}),
-            ValCls,
+            partial(ValCls, pool_size=self.pool_size),
             self.writer,
             self.critic,
             self.client,
@@ -345,7 +352,7 @@ class AutonomousJob:
         n_rows = int(self.phase_cfg.get("n_rows", 5))
         for p in pairs:
             sql = _clean_sql(p.get("sql", ""))
-            ok, err = self.validator.check(sql)
+            ok, err = await asyncio.to_thread(self.validator.check, sql)
             if not ok:
                 log.warning("Validation failed for %s: %s", sql, err)
                 checked.append({"question": p.get("question", ""), "sql": "FAIL"})
@@ -399,10 +406,10 @@ class AutonomousJob:
         return {"question": nl_question, "sql": _clean_sql(sql)}
 
     @log_call
-    def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
+    async def _tool_validate_sql(self, sql: str) -> Dict[str, Any]:
         """LLM tool: validate SQL via :class:`SQLValidator`."""
         log.info("Validating SQL: %s", sql)
-        ok, err = self.validator.check(sql)
+        ok, err = await asyncio.to_thread(self.validator.check, sql)
         return {"ok": ok, "error": err}
 
     @log_call
@@ -522,7 +529,7 @@ class AutonomousJob:
             sql = _clean_sql(data.get("sql", ""))
             question = data.get("question", task["question"])
             result = JobResult(question, sql, data.get("rows", []))
-            ok, err = self.validator.check(result.sql)
+            ok, err = await asyncio.to_thread(self.validator.check, result.sql)
             if not ok:
                 log.warning("SQL validation failed: %s", err)
                 result.sql = "FAIL"
