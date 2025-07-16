@@ -23,7 +23,7 @@ phases:
 
 
   - name: single_table
-    count: 150
+    count: 500
     parallelism: 50
     use_sample_rows: true
     prompt_template: single_table_sql_template.txt
@@ -32,8 +32,8 @@ phases:
     api_answer_count: 50
 
   - name: joins
-    count: 60
-    parallelism: 30
+    count: 180
+    parallelism: 60
     api_answer_count: 30
     use_sample_rows: true
     min_joins: 2
@@ -41,7 +41,7 @@ phases:
     tag_schema_json: false
 
   - name: complex_sqls
-    count: 10
+    count: 30
     use_sample_rows: true
     parallelism: 50
     min_joins: 3
