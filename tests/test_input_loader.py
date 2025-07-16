@@ -174,7 +174,44 @@ phases:
     assert {t["metadata"]["table"] for t in tasks} == {"a", "b"}
     assert all(t["metadata"]["count"] == 2 for t in tasks)
     assert all(t["metadata"]["parallelism"] == 2 for t in tasks)
-    assert all(t["metadata"]["prompt_template"] == "single_table_sql_template.txt" for t in tasks)
+    assert all(
+        t["metadata"]["prompt_template"] == "single_table_sql_template.txt"
+        for t in tasks
+    )
+
+
+def test_single_table_parallelism_cap(tmp_path):
+    cfg = """
+defaults:
+  parallelism: 10
+phases:
+  - name: single_table
+    count: 1
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    schema = {"a": object(), "b": object(), "c": object()}
+    tasks = load_tasks(str(path), schema)
+
+    assert all(t["metadata"]["parallelism"] == 3 for t in tasks)
+
+
+def test_single_table_respects_config_parallelism(tmp_path):
+    cfg = """
+defaults:
+  parallelism: 2
+phases:
+  - name: single_table
+    count: 1
+"""
+    path = tmp_path / "cfg.yaml"
+    path.write_text(cfg)
+
+    schema = {"a": object(), "b": object(), "c": object()}
+    tasks = load_tasks(str(path), schema)
+
+    assert all(t["metadata"]["parallelism"] == 2 for t in tasks)
 
 
 def test_joins_phase(tmp_path):
@@ -192,6 +229,7 @@ phases:
     meta = tasks[0]["metadata"]
     assert meta["count"] == 5
     assert meta["min_joins"] == 3
+
 
 def test_complex_sqls_phase(tmp_path):
     cfg = """

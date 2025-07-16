@@ -239,6 +239,7 @@ class AutonomousJob:
         api_count = int(self.phase_cfg.get("api_answer_count", k))
         max_attempts = int(self.phase_cfg.get("max_attempts", 6))
         parallel = int(self.phase_cfg.get("parallelism", 1))
+        parallel = min(parallel, len(self.schema))
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
@@ -249,8 +250,11 @@ class AutonomousJob:
             try:
                 rows = self.writer.fetch(f"SELECT * FROM {table} LIMIT {n}", n)
                 extra["sample_rows"] = {table: rows}
+                log.info("Loaded sample rows for %s: %s", table, rows)
             except Exception as err:
                 log.warning("Failed fetching sample rows for %s: %s", table, err)
+
+        log.info("Sending schema to OpenAI: %s", subset)
 
         messages = build_prompt(
             task.get("question", ""), subset, {**self.phase_cfg, **extra}
@@ -271,28 +275,40 @@ class AutonomousJob:
         attempts = 0
         n_rows = int(self.phase_cfg.get("n_rows", 5))
 
+        validation_sem = asyncio.Semaphore(self.pool_size)
+
+        async def _validate_pair(p: dict[str, str]) -> dict[str, str]:
+            if "sql" not in p:
+                return p
+            sql = _clean_sql(p["sql"])
+            async with validation_sem:
+                ok, err = await asyncio.to_thread(self.validator.check, sql)
+                if not ok:
+                    log.warning("SQL validation failed: %s", err)
+                    p["sql"] = "FAIL"
+                else:
+                    try:
+                        await asyncio.to_thread(self.writer.fetch, sql, n_rows)
+                        p["sql"] = sql
+                    except Exception as err:
+                        log.warning("Execution failed for %s: %s", sql, err)
+                        p["sql"] = "FAIL"
+            return p
+
         while len(results) < k and attempts < max_attempts:
             msg = await self.client.acomplete(messages, return_message=True)
             msg_dict = msg if isinstance(msg, dict) else msg.model_dump()
             pairs = _parse_pairs(msg_dict.get("content", ""))
 
-            for p in pairs:
-                if len(results) >= k:
-                    break
-                if "sql" in p:
-                    sql = _clean_sql(p["sql"])
-                    ok, err = await asyncio.to_thread(self.validator.check, sql)
-                    if not ok:
-                        log.warning("SQL validation failed: %s", err)
-                        p["sql"] = "FAIL"
-                    else:
-                        try:
-                            self.writer.fetch(sql, n_rows)
-                            p["sql"] = sql
-                        except Exception as err:
-                            log.warning("Execution failed for %s: %s", sql, err)
-                            p["sql"] = "FAIL"
-                results.append(p)
+            remaining = k - len(results)
+            batch = pairs[:remaining]
+            log.info(
+                "Validating %d SQL statements with DB pool size %d",
+                len(batch),
+                self.pool_size,
+            )
+            validated = await asyncio.gather(*[_validate_pair(p) for p in batch])
+            results.extend(validated)
 
             messages.append(msg_dict)
             attempts += 1

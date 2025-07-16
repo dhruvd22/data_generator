@@ -131,13 +131,15 @@ def load_tasks(
         if name.lower() == "single_table":
             count = int(phase_def.get("count", 1))
             table_list = table_names or ["table_1"]
+            max_par = int(meta.get("parallelism", len(table_list)))
+            parallel = min(len(table_list), max_par)
             for tbl in table_list:
                 q = _natural_table_question(tbl, count)
                 meta_with_tbl = {
                     **meta,
                     "table": tbl,
                     "count": count,
-                    "parallelism": len(table_list),
+                    "parallelism": parallel,
                 }
                 tasks.append({"phase": name, "question": q, "metadata": meta_with_tbl})
             continue
