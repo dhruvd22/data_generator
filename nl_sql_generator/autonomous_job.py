@@ -296,9 +296,18 @@ class AutonomousJob:
             return p
 
         while len(results) < k and attempts < max_attempts:
+            log.info(
+                "API request %d with history length %d", attempts + 1, len(messages)
+            )
             msg = await self.client.acomplete(messages, return_message=True)
             msg_dict = msg if isinstance(msg, dict) else msg.model_dump()
             pairs = _parse_pairs(msg_dict.get("content", ""))
+            log.info(
+                "Received %d candidate pairs (%d/%d total)",
+                len(pairs),
+                len(results),
+                k,
+            )
 
             remaining = k - len(results)
             batch = pairs[:remaining]
@@ -316,6 +325,12 @@ class AutonomousJob:
                 break
             if attempts < max_attempts:
                 remaining = max(0, min(api_count, k - len(results)))
+                log.info(
+                    "Requesting %d additional pairs (%d/%d remaining)",
+                    remaining,
+                    k - len(results),
+                    k,
+                )
                 follow = {
                     "role": "user",
                     "content": f"Generate {remaining} more question-SQL pairs about the table.",
