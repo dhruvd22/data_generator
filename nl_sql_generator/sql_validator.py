@@ -45,6 +45,7 @@ class SQLValidator:
             max_overflow=0,
             connect_args={"sslmode": "require"},
         )
+        log.info("SQLValidator pool size set to %d", pool_size)
 
     def check(self, sql: str) -> tuple[bool, str | None]:
         """Return ``(is_valid, error_msg)`` for the given SQL."""

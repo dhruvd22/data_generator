@@ -238,6 +238,10 @@ class AutonomousJob:
         subset = {table: self.schema[table]}
         api_count = int(self.phase_cfg.get("api_answer_count", k))
         max_attempts = int(self.phase_cfg.get("max_attempts", 6))
+        parallel = int(self.phase_cfg.get("parallelism", 1))
+        if hasattr(self.client, "set_parallelism"):
+            self.client.set_parallelism(parallel)
+        log.info("Assigned %d concurrent OpenAI sessions", parallel)
 
         extra = {"table": table, "count": min(api_count, k)}
         if self.phase_cfg.get("use_sample_rows"):
@@ -319,6 +323,11 @@ class AutonomousJob:
         from .sql_validator import SQLValidator as ValCls
 
         from functools import partial
+
+        parallel = int(self.phase_cfg.get("parallelism", 1))
+        if hasattr(self.client, "set_parallelism"):
+            self.client.set_parallelism(parallel)
+        log.info("Assigned %d concurrent OpenAI sessions", parallel)
 
         pool = JoinPool(
             self.schema,
