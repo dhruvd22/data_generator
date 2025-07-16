@@ -155,7 +155,12 @@ class ResponsesClient:
         usage: Aggregate token and cost tracking.
     """
 
-    def __init__(self, model: str = "gpt-4.1", budget_usd: float = 0.0) -> None:
+    def __init__(
+        self,
+        model: str = "gpt-4.1",
+        budget_usd: float = 0.0,
+        max_parallel: int | None = None,
+    ) -> None:
         """Instantiate the client.
 
         Args:
@@ -177,7 +182,9 @@ class ResponsesClient:
 
         self._client = AsyncOpenAI(api_key=api_key)
         self._sync_client = OpenAI(api_key=api_key)
-        self._max_parallel = int(os.getenv("OPENAI_MAX_PARALLEL", "5"))
+        if max_parallel is None:
+            max_parallel = int(os.getenv("OPENAI_MAX_PARALLEL", "5"))
+        self._max_parallel = int(max_parallel)
         self._sem = asyncio.Semaphore(self._max_parallel)
         self._lock = asyncio.Lock()
 
@@ -375,6 +382,13 @@ class ResponsesClient:
         """
 
         return self.budget_usd - self.cost_spent
+
+    def set_parallelism(self, n: int) -> None:
+        """Update the maximum number of concurrent OpenAI calls."""
+
+        self._max_parallel = max(1, int(n))
+        self._sem = asyncio.Semaphore(self._max_parallel)
+        log.info("OpenAI concurrent sessions set to %d", self._max_parallel)
 
 
 _default_client: ResponsesClient | None = None
