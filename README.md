@@ -155,7 +155,8 @@ The `config.yaml` file defines several phases used when creating datasets:
   keep chat history across requests. Agents run concurrently based on
   `parallelism`.
 - **joins** – produce questions that join multiple tables together. Join workers
-  also respect `api_answer_count` and run in parallel to speed up generation.
+  also respect `api_answer_count`, run in parallel, and validate SQL concurrently
+  using the `db_cocurrent_session` setting.
 - **complex_sqls** – larger join queries based on GPT suggested table sets.
 - **sample_data** – export anonymised sample rows from each table.
 - **schema_relationship** – discover potential relationships between tables.
