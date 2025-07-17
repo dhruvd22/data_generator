@@ -23,7 +23,7 @@ class DummyClient:
 
 
 class DummyWorker:
-    def __init__(self, schema, cfg, validator_cls, critic, writer, wid, client):
+    def __init__(self, schema, cfg, validator_cls, critic, writer, wid, client, *args):
         self.cfg = cfg
         DummyWorker.last_cfg = cfg
 
@@ -86,7 +86,7 @@ def test_join_pool_cleans_sql(monkeypatch):
 
 def test_join_pool_enforces_count_per_worker(monkeypatch):
     class Worker:
-        def __init__(self, schema, cfg, validator_cls, critic, writer, wid, client):
+        def __init__(self, schema, cfg, validator_cls, critic, writer, wid, client, *args):
             self.wid = wid
 
         async def generate(self, batch_size):

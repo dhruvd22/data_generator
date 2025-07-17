@@ -10,6 +10,7 @@ import math
 import itertools
 import logging
 import json
+import os
 from typing import Any, Dict, List
 
 from .prompt_builder import load_template_messages
@@ -32,6 +33,7 @@ class JoinPool:
         writer,
         critic,
         client: ResponsesClient,
+        pool_size: int | None = None,
     ) -> None:
         """Create a pool instance.
 
@@ -49,6 +51,9 @@ class JoinPool:
         self.writer = writer
         self.critic = critic
         self.client = client
+        if pool_size is None:
+            pool_size = int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        self.pool_size = pool_size
         self.seen: set[tuple[str, str]] = set()
         self.lock = asyncio.Lock()
         self.log = logging.getLogger(__name__)
@@ -142,6 +147,7 @@ class JoinPool:
             self.writer,
             worker_id,
             self.client,
+            self.pool_size,
         )
         pairs = await agent.generate(batch_size)
         async with self.lock:

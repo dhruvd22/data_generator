@@ -25,6 +25,7 @@ class JoinWorker:
         writer,
         wid: int,
         client: ResponsesClient,
+        pool_size: int | None = None,
     ) -> None:
         """Create a worker tied to a schema slice.
 
@@ -40,6 +41,9 @@ class JoinWorker:
 
         self.schema = schema
         self.cfg = cfg
+        if pool_size is None:
+            pool_size = int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        self.pool_size = pool_size
         self.validator = validator_cls()
         self.critic = critic
         self.writer = writer
@@ -121,38 +125,65 @@ class JoinWorker:
         n_rows = int(self.cfg.get("n_rows", 5))
         min_joins = int(self.cfg.get("min_joins", 2))
 
+        validation_sem = asyncio.Semaphore(self.pool_size)
+
+        async def _validate_pair(p: Dict[str, str]) -> Dict[str, str] | None:
+            q = p.get("question", "")
+            sql = _clean_sql(p.get("sql", ""))
+            attempts_v = 0
+            ok = False
+            while attempts_v <= 2:
+                async with validation_sem:
+                    ok, err = await asyncio.to_thread(self.validator.check, sql)
+                if ok:
+                    break
+                log.warning("Worker %d validation failed: %s", self.wid, err)
+                if attempts_v >= 2:
+                    return None
+                fix = await self.critic.areview(
+                    q, sql, _schema_as_markdown(self.schema)
+                )
+                sql = _clean_sql(fix.get("fixed_sql", sql))
+                attempts_v += 1
+            if not ok or self._join_table_count(sql) < min_joins:
+                return None
+            try:
+                await asyncio.to_thread(self.writer.fetch, sql, n_rows)
+                return {"question": q, "sql": sql}
+            except Exception as err:
+                log.warning("Worker %d execution failed: %s", self.wid, err)
+                return None
+
         while len(total) < k and attempts < max_attempts:
+            log.info(
+                "API request %d with history length %d",
+                attempts + 1,
+                len(messages),
+            )
             message = await self.client.acomplete(messages, return_message=True)
             msg_dict = self._to_dict(message)
             if self.chat_log_path:
                 self.chat_history.append(msg_dict)
                 self._write_chat([msg_dict])
             pairs = _parse_pairs(msg_dict.get("content", ""))
-            for p in pairs:
-                if len(total) >= k:
-                    break
-                q = p.get("question", "")
-                sql = _clean_sql(p.get("sql", ""))
-                attempts_v = 0
-                while attempts_v <= 2:
-                    ok, err = await asyncio.to_thread(self.validator.check, sql)
-                    if ok:
-                        break
-                    log.warning("Worker %d validation failed: %s", self.wid, err)
-                    if attempts_v >= 2:
-                        sql = None
-                        break
-                    fix = await self.critic.areview(
-                        q, sql, _schema_as_markdown(self.schema)
-                    )
-                    sql = _clean_sql(fix.get("fixed_sql", sql))
-                    attempts_v += 1
-                if sql and ok and self._join_table_count(sql) >= min_joins:
-                    try:
-                        self.writer.fetch(sql, n_rows)
-                        total.append({"question": q, "sql": sql})
-                    except Exception as err:
-                        log.warning("Worker %d execution failed: %s", self.wid, err)
+            log.info(
+                "Received %d candidate pairs (%d/%d total)",
+                len(pairs),
+                len(total),
+                k,
+            )
+
+            remaining = k - len(total)
+            batch = pairs[:remaining]
+            log.info(
+                "Validating %d SQL statements with DB pool size %d",
+                len(batch),
+                self.pool_size,
+            )
+            validated = await asyncio.gather(*[_validate_pair(p) for p in batch])
+            for v in validated:
+                if v:
+                    total.append(v)
 
             messages.append(msg_dict)
             attempts += 1

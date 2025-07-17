@@ -367,6 +367,7 @@ class AutonomousJob:
             self.writer,
             self.critic,
             self.client,
+            self.pool_size,
         )
         pairs = await pool.generate()
 
