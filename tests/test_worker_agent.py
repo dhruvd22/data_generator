@@ -182,7 +182,9 @@ def test_full_batch_requests_next_batch():
     k = api_count * 2
     client = FullBatchClient(api_count)
     schema = {"t": TableInfo("t", [ColumnInfo("id", "int")])}
-    agent = WorkerAgent(schema, {"api_answer_count": api_count}, lambda: None, 1, client)
+    agent = WorkerAgent(
+        schema, {"api_answer_count": api_count}, lambda: None, 1, client
+    )
     pairs = asyncio.run(agent.generate(k))
 
     assert len(pairs) == k
@@ -205,4 +207,4 @@ def test_chat_log_created(tmp_path, monkeypatch):
     log_files = list((tmp_path / "logs").glob("worker-1-*.jsonl"))
     assert len(log_files) == 1
     lines = log_files[0].read_text().splitlines()
-    assert lines and any(json.loads(l)["role"] == "assistant" for l in lines)
+    assert lines and any(json.loads(line)["role"] == "assistant" for line in lines)

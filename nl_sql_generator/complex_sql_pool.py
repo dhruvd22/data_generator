@@ -8,14 +8,14 @@ import json
 import logging
 from typing import Any, Dict, List
 
-# Default concurrency used when ``parallelism`` is not provided via
-# phase configuration.
-DEFAULT_PARALLELISM = 10
-
 from .prompt_builder import load_template_messages
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
 from .autonomous_job import _clean_sql
+
+# Default concurrency used when ``parallelism`` is not provided via
+# phase configuration.
+DEFAULT_PARALLELISM = 10
 
 
 class ComplexSqlPool:
@@ -179,9 +179,8 @@ class ComplexSqlPool:
             n_workers,
         )
 
-        while (
-            any(p < per_worker for p in produced)
-            and attempts < self.cfg.get("max_attempts", 6)
+        while any(p < per_worker for p in produced) and attempts < self.cfg.get(
+            "max_attempts", 6
         ):
             jobs = []
             for i in range(n_workers):
@@ -201,9 +200,7 @@ class ComplexSqlPool:
             )
 
         total_goal = per_worker * n_workers
-        self.log.info(
-            "Complex join generation finished with %d pairs", len(self.seen)
-        )
+        self.log.info("Complex join generation finished with %d pairs", len(self.seen))
         return [
             {"question": q, "sql": _clean_sql(s)}
             for q, s in itertools.islice(self.seen, total_goal)

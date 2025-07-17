@@ -31,6 +31,7 @@ from .critic import Critic
 from .writer import ResultWriter
 from .schema_loader import SchemaLoader, TableInfo
 from .logger import log_call
+from .utils import limit_pool_size
 import logging
 
 __all__ = ["AutonomousJob", "JobResult"]
@@ -359,6 +360,8 @@ class AutonomousJob:
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
+        self.pool_size = limit_pool_size(parallel, self.pool_size)
+        log.info("DB pool size adjusted to %d for %d workers", self.pool_size, parallel)
 
         pool = JoinPool(
             self.schema,
@@ -405,6 +408,13 @@ class AutonomousJob:
 
         from functools import partial
 
+        parallel = int(self.phase_cfg.get("parallelism", 1))
+        self.pool_size = limit_pool_size(parallel, self.pool_size)
+        log.info(
+            "DB pool size adjusted to %d for %d workers (complex)",
+            self.pool_size,
+            parallel,
+        )
         pool = ComplexSqlPool(
             self.schema,
             task.get("metadata", {}),

@@ -6,7 +6,6 @@ pairs so duplicates are filtered across workers.
 """
 
 import asyncio
-import math
 import itertools
 import logging
 import json
@@ -14,12 +13,11 @@ import os
 from typing import Any, Dict, List
 
 from .prompt_builder import load_template_messages
-
-DEFAULT_PARALLELISM = 10
-
 from .join_worker import JoinWorker
 from .openai_responses import ResponsesClient
 from .autonomous_job import _clean_sql
+
+DEFAULT_PARALLELISM = 10
 
 
 class JoinPool:
@@ -173,9 +171,8 @@ class JoinPool:
             n_workers,
         )
 
-        while (
-            any(p < per_worker for p in produced)
-            and attempts < self.cfg.get("max_attempts", 6)
+        while any(p < per_worker for p in produced) and attempts < self.cfg.get(
+            "max_attempts", 6
         ):
             jobs = []
             for i in range(n_workers):
