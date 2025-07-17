@@ -113,6 +113,8 @@ class AutonomousJob:
         self.critic = critic or Critic(client=self.client)
         self.writer = writer or ResultWriter()
         self._write_lock = asyncio.Lock()
+        # maximum number of tasks that may run concurrently
+        self.tasks_parallelism = 1
 
         self._tool_map: Dict[str, Callable[..., Any]] = {
             "generate_sql": self._tool_generate_sql,
@@ -206,6 +208,11 @@ class AutonomousJob:
 
         from .schema_relationship import discover_relationships
 
+        self.pool_size = limit_pool_size(self.tasks_parallelism, self.pool_size)
+        log.info(
+            "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
+        )
+
         n_rows = int(task.get("metadata", {}).get("n_rows", 5))
         # ``discover_relationships`` currently accepts a ``sample_limit``
         # argument for controlling how many rows to analyse.  The
@@ -244,6 +251,10 @@ class AutonomousJob:
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
+        self.pool_size = limit_pool_size(self.tasks_parallelism, self.pool_size)
+        log.info(
+            "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
+        )
 
         extra = {"table": table, "count": min(api_count, k)}
         if self.phase_cfg.get("use_sample_rows"):
@@ -360,8 +371,13 @@ class AutonomousJob:
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
-        self.pool_size = limit_pool_size(parallel, self.pool_size)
-        log.info("DB pool size adjusted to %d for %d workers", self.pool_size, parallel)
+        self.pool_size = limit_pool_size(parallel * self.tasks_parallelism, self.pool_size)
+        log.info(
+            "DB pool size adjusted to %d for %d workers across %d tasks",
+            self.pool_size,
+            parallel,
+            self.tasks_parallelism,
+        )
 
         pool = JoinPool(
             self.schema,
@@ -409,11 +425,12 @@ class AutonomousJob:
         from functools import partial
 
         parallel = int(self.phase_cfg.get("parallelism", 1))
-        self.pool_size = limit_pool_size(parallel, self.pool_size)
+        self.pool_size = limit_pool_size(parallel * self.tasks_parallelism, self.pool_size)
         log.info(
-            "DB pool size adjusted to %d for %d workers (complex)",
+            "DB pool size adjusted to %d for %d workers across %d tasks (complex)",
             self.pool_size,
             parallel,
+            self.tasks_parallelism,
         )
         pool = ComplexSqlPool(
             self.schema,
@@ -740,4 +757,5 @@ class AutonomousJob:
         env_par = os.getenv("DG_PARALLELISM")
         if env_par:
             parallelism = max(parallelism, int(env_par))
+        self.tasks_parallelism = parallelism
         return asyncio.run(self._run_tasks_async(tasks, run_version, parallelism))
