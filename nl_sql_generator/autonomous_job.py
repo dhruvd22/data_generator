@@ -369,7 +369,32 @@ class AutonomousJob:
             self.client,
         )
         pairs = await pool.generate()
-        return JobResult(task.get("question", ""), "", pairs)
+
+        validation_sem = asyncio.Semaphore(self.pool_size)
+        n_rows = int(self.phase_cfg.get("n_rows", 5))
+
+        async def _validate_pair(p: dict[str, str]) -> dict[str, str]:
+            sql = _clean_sql(p.get("sql", ""))
+            if not sql:
+                p["sql"] = "FAIL"
+                return p
+            async with validation_sem:
+                ok, err = await asyncio.to_thread(self.validator.check, sql)
+                if not ok:
+                    log.warning("SQL validation failed: %s", err)
+                    p["sql"] = "FAIL"
+                else:
+                    try:
+                        await asyncio.to_thread(self.writer.fetch, sql, n_rows)
+                        p["sql"] = sql
+                    except Exception as err:
+                        log.warning("Execution failed for %s: %s", sql, err)
+                        p["sql"] = "FAIL"
+            return p
+
+        pairs = await asyncio.gather(*[_validate_pair(p) for p in pairs])
+
+        return JobResult(task.get("question", ""), "", list(pairs))
 
     async def _run_complex_sqls_async(self, task: NLTask) -> JobResult:
         """Generate NL/SQL pairs joining multiple tables with GPT-selected sets."""
