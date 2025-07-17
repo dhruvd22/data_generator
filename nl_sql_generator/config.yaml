@@ -34,7 +34,7 @@ phases:
   - name: joins
     count: 180
     parallelism: 60
-    api_answer_count: 30
+    api_answer_count: 60
     use_sample_rows: true
     min_joins: 2
     dataset_output_file_dir: generated_datasets/joins
