@@ -200,6 +200,7 @@ Environment variables:
 - `OPENAI_API_KEY` – OpenAI credentials
 - `DG_PARALLELISM` – optional override for helper agents
 - `DB_COCURRENT_SESSION` – connection pool size for SQL validation (default 50)
+- `MAX_DB_CONCURRENT_LIMIT_ALL` – max total DB sessions across all workers (default 450)
 
 ## Logging, Testing & CI
 - Logs live in `logs/` with one file per run. Single-table and schema-doc
