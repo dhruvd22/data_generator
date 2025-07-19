@@ -108,7 +108,8 @@ class AutonomousJob:
         self.schema = schema
         self.phase_cfg = phase_cfg or {}
         self.client = client or ResponsesClient()
-        self.pool_size = pool_size or int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        self.base_pool_size = pool_size or int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        self.pool_size = self.base_pool_size
         self.validator = validator or SQLValidator(pool_size=self.pool_size)
         self.critic = critic or Critic(client=self.client)
         self.writer = writer or ResultWriter()
@@ -208,7 +209,9 @@ class AutonomousJob:
 
         from .schema_relationship import discover_relationships
 
-        self.pool_size = limit_pool_size(self.tasks_parallelism, self.pool_size)
+        self.pool_size = limit_pool_size(
+            self.tasks_parallelism, pool_size=self.base_pool_size
+        )
         log.info(
             "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
         )
@@ -251,7 +254,9 @@ class AutonomousJob:
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
-        self.pool_size = limit_pool_size(self.tasks_parallelism, self.pool_size)
+        self.pool_size = limit_pool_size(
+            self.tasks_parallelism, pool_size=self.base_pool_size
+        )
         log.info(
             "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
         )
@@ -371,7 +376,9 @@ class AutonomousJob:
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
-        self.pool_size = limit_pool_size(parallel * self.tasks_parallelism, self.pool_size)
+        self.pool_size = limit_pool_size(
+            parallel * self.tasks_parallelism, pool_size=self.base_pool_size
+        )
         log.info(
             "DB pool size adjusted to %d for %d workers across %d tasks",
             self.pool_size,
@@ -425,7 +432,9 @@ class AutonomousJob:
         from functools import partial
 
         parallel = int(self.phase_cfg.get("parallelism", 1))
-        self.pool_size = limit_pool_size(parallel * self.tasks_parallelism, self.pool_size)
+        self.pool_size = limit_pool_size(
+            parallel * self.tasks_parallelism, pool_size=self.base_pool_size
+        )
         log.info(
             "DB pool size adjusted to %d for %d workers across %d tasks (complex)",
             self.pool_size,
