@@ -125,7 +125,7 @@ def test_join_pool_uses_default_parallelism(monkeypatch):
     captured = {}
 
     def _load_template(_, __, ___, extra):
-        captured["count"] = extra.get("count")
+        captured["total_table_pairs"] = extra.get("total_table_pairs")
         return []
 
     class _Client(DummyClient):
@@ -143,4 +143,4 @@ def test_join_pool_uses_default_parallelism(monkeypatch):
 
     pool = JoinPool(schema, {}, object, writer, None, client)
     asyncio.run(pool._schema_chunks())
-    assert captured["count"] == 10
+    assert captured["total_table_pairs"] == 10

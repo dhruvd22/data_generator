@@ -34,6 +34,7 @@ phases:
   - name: joins
     count: 80
     parallelism: 30
+    total_table_pairs: 30
     api_answer_count: 60
     use_sample_rows: true
     min_joins: 2
