@@ -405,7 +405,8 @@ class AutonomousJob:
         )
         pairs = await pool.generate()
 
-        validation_sem = asyncio.Semaphore(self.pool_size)
+        post_size = int(os.getenv("DB_COCURRENT_SESSION", str(self.pool_size)))
+        validation_sem = asyncio.Semaphore(post_size)
         n_rows = int(self.phase_cfg.get("n_rows", 5))
 
         async def _validate_pair(p: dict[str, str]) -> dict[str, str]:
