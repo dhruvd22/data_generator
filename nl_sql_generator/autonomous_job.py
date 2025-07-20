@@ -391,7 +391,7 @@ class AutonomousJob:
             task.get("metadata", {}),
             partial(ValCls, pool_size=self.pool_size),
             self.writer,
-            self.critic,
+            None,
             self.client,
             self.pool_size,
         )
@@ -648,14 +648,25 @@ class AutonomousJob:
         cleared: set[str] = set()
         dedup: dict[str, set] = {}
         sem = asyncio.Semaphore(max(parallelism, 1))
+        running = 0
+        lock = asyncio.Lock()
 
         async def _runner(idx: int, t: NLTask) -> None:
+            nonlocal running
             async with sem:
+                async with lock:
+                    running += 1
+                    self.tasks_parallelism = running
                 total = len(tasks)
-                log.info("Running task %d/%d: %s", idx + 1, total, t.get("question"))
+                log.info(
+                    "Running task %d/%d: %s", idx + 1, total, t.get("question")
+                )
                 res = await self.run_task(t)
                 results[idx] = res
                 log.info("Completed task %d/%d", idx + 1, total)
+                async with lock:
+                    running -= 1
+                    self.tasks_parallelism = max(running, 1)
 
                 out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
                 if out_dir:
