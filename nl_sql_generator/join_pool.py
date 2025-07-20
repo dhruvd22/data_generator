@@ -61,8 +61,9 @@ class JoinPool:
 
         n = int(self.cfg.get("parallelism", DEFAULT_PARALLELISM))
         min_joins = int(self.cfg.get("min_joins", 2))
-        extra = {"count": n, "min_joins": min_joins}
-        self.log.info("Requesting %d joinable table sets", n)
+        n_pairs = int(self.cfg.get("total_table_pairs", n))
+        extra = {"total_table_pairs": n_pairs, "min_joins": min_joins}
+        self.log.info("Requesting %d joinable table sets", n_pairs)
         try:
             messages = load_template_messages(
                 "join_set_template.txt", self.schema, "", extra
