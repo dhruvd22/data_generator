@@ -31,7 +31,7 @@ from .critic import Critic
 from .writer import ResultWriter
 from .schema_loader import SchemaLoader, TableInfo
 from .logger import log_call
-from .utils import limit_pool_size
+from .utils import limit_pool_size, pool_usage
 import logging
 
 __all__ = ["AutonomousJob", "JobResult"]
@@ -214,7 +214,9 @@ class AutonomousJob:
             workers, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
-            "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
+            "DB pool size adjusted to %d across %d tasks",
+            self.pool_size,
+            self.tasks_parallelism,
         )
 
         n_rows = int(task.get("metadata", {}).get("n_rows", 5))
@@ -259,7 +261,9 @@ class AutonomousJob:
             1, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
-            "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
+            "DB pool size adjusted to %d across %d tasks",
+            self.pool_size,
+            self.tasks_parallelism,
         )
 
         extra = {"table": table, "count": min(api_count, k)}
@@ -329,10 +333,13 @@ class AutonomousJob:
 
             remaining = k - len(results)
             batch = pairs[:remaining]
+            in_use, available = pool_usage(getattr(self.validator, "eng", None))
             log.info(
-                "Validating %d SQL statements with DB pool size %d",
+                "Validating %d SQL statements with DB pool size %d (in_use=%d available=%d)",
                 len(batch),
                 self.pool_size,
+                in_use,
+                available,
             )
             validated = await asyncio.gather(*[_validate_pair(p) for p in batch])
             results.extend(validated)
@@ -420,6 +427,14 @@ class AutonomousJob:
                         p["sql"] = "FAIL"
             return p
 
+        in_use, available = pool_usage(getattr(self.validator, "eng", None))
+        log.info(
+            "Validating %d SQL statements with DB pool size %d (in_use=%d available=%d)",
+            len(pairs),
+            self.pool_size,
+            in_use,
+            available,
+        )
         pairs = await asyncio.gather(*[_validate_pair(p) for p in pairs])
 
         return JobResult(task.get("question", ""), "", list(pairs))
@@ -658,9 +673,7 @@ class AutonomousJob:
                 async with lock:
                     running += 1
                 total = len(tasks)
-                log.info(
-                    "Running task %d/%d: %s", idx + 1, total, t.get("question")
-                )
+                log.info("Running task %d/%d: %s", idx + 1, total, t.get("question"))
                 res = await self.run_task(t)
                 results[idx] = res
                 log.info("Completed task %d/%d", idx + 1, total)

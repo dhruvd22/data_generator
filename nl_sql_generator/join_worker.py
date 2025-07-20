@@ -9,6 +9,7 @@ from .openai_responses import ResponsesClient
 from .prompt_builder import load_template_messages, _schema_as_markdown
 from .worker_agent import _parse_pairs
 from .autonomous_job import _clean_sql
+from .utils import pool_usage
 
 log = logging.getLogger(__name__)
 
@@ -175,10 +176,13 @@ class JoinWorker:
 
             remaining = k - len(total)
             batch = pairs[:remaining]
+            in_use, available = pool_usage(getattr(self.validator, "eng", None))
             log.info(
-                "Validating %d SQL statements with DB pool size %d",
+                "Validating %d SQL statements with DB pool size %d (in_use=%d available=%d)",
                 len(batch),
                 self.pool_size,
+                in_use,
+                available,
             )
             validated = await asyncio.gather(*[_validate_pair(p) for p in batch])
             for v in validated:
