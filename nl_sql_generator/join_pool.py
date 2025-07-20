@@ -190,6 +190,10 @@ class JoinPool:
             self.log.info(
                 "Attempt %d complete, per-worker totals=%s", attempts, produced
             )
+            overall = sum(produced)
+            self.log.info(
+                "Overall progress: %d/%d pairs", overall, per_worker * n_workers
+            )
 
         total_goal = per_worker * n_workers
         self.log.info("Join generation finished with %d pairs", len(self.seen))

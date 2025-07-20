@@ -138,7 +138,7 @@ class JoinWorker:
                 if ok:
                     break
                 log.warning("Worker %d validation failed: %s", self.wid, err)
-                if attempts_v >= 2:
+                if not self.critic or attempts_v >= 2:
                     return None
                 fix = await self.critic.areview(
                     q, sql, _schema_as_markdown(self.schema)
