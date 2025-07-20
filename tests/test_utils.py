@@ -42,6 +42,13 @@ def test_limit_pool_size(monkeypatch):
     assert limit_pool_size(25) == 4  # 100//25=4
 
 
+def test_limit_pool_size_tasks(monkeypatch):
+    monkeypatch.setenv("MAX_DB_CONCURRENT_LIMIT_ALL", "100")
+    monkeypatch.setenv("DB_COCURRENT_SESSION", "50")
+    # workers=5 across 5 tasks -> allowed 100//(5*5)=4
+    assert limit_pool_size(5, tasks=5) == 4
+
+
 def test_join_pool_pool_size_limited(monkeypatch):
     monkeypatch.setenv("MAX_DB_CONCURRENT_LIMIT_ALL", "100")
     monkeypatch.setenv("DB_COCURRENT_SESSION", "50")

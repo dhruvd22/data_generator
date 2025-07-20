@@ -209,8 +209,9 @@ class AutonomousJob:
 
         from .schema_relationship import discover_relationships
 
+        workers = int(task.get("metadata", {}).get("parallelism", 4))
         self.pool_size = limit_pool_size(
-            self.tasks_parallelism, pool_size=self.base_pool_size
+            workers, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
             "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
@@ -255,7 +256,7 @@ class AutonomousJob:
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
         self.pool_size = limit_pool_size(
-            self.tasks_parallelism, pool_size=self.base_pool_size
+            1, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
             "DB pool size adjusted to %d across %d tasks", self.pool_size, self.tasks_parallelism
@@ -377,7 +378,7 @@ class AutonomousJob:
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
         self.pool_size = limit_pool_size(
-            parallel * self.tasks_parallelism, pool_size=self.base_pool_size
+            parallel, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
             "DB pool size adjusted to %d for %d workers across %d tasks",
@@ -433,7 +434,7 @@ class AutonomousJob:
 
         parallel = int(self.phase_cfg.get("parallelism", 1))
         self.pool_size = limit_pool_size(
-            parallel * self.tasks_parallelism, pool_size=self.base_pool_size
+            parallel, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
         )
         log.info(
             "DB pool size adjusted to %d for %d workers across %d tasks (complex)",
@@ -656,7 +657,6 @@ class AutonomousJob:
             async with sem:
                 async with lock:
                     running += 1
-                    self.tasks_parallelism = running
                 total = len(tasks)
                 log.info(
                     "Running task %d/%d: %s", idx + 1, total, t.get("question")
@@ -666,7 +666,6 @@ class AutonomousJob:
                 log.info("Completed task %d/%d", idx + 1, total)
                 async with lock:
                     running -= 1
-                    self.tasks_parallelism = max(running, 1)
 
                 out_dir = t.get("metadata", {}).get("dataset_output_file_dir")
                 if out_dir:

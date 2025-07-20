@@ -202,6 +202,7 @@ Environment variables:
 - `DB_COCURRENT_SESSION` – connection pool size for SQL validation (default 50)
 - `MAX_DB_CONCURRENT_LIMIT_ALL` – max total DB sessions across all workers
   and tasks (default 450)
+  Pool size for each worker is calculated as `min(DB_COCURRENT_SESSION, MAX_DB_CONCURRENT_LIMIT_ALL // (workers * tasks))`.
 
 ## Logging, Testing & CI
 - Logs live in `logs/` with one file per run. Single-table and schema-doc

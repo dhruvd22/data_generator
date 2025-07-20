@@ -8,10 +8,12 @@ def limit_pool_size(
 ) -> int:
     """Return a DB pool size respecting the global session cap.
 
-    ``workers`` represents the number of concurrent worker instances per task
-    while ``tasks`` denotes how many tasks may run in parallel.  The returned
-    pool size is clamped so that the total sessions across all workers stay
-    below ``MAX_DB_CONCURRENT_LIMIT_ALL``.
+    ``workers`` denotes concurrent worker instances per task and ``tasks``
+    indicates how many tasks run simultaneously.  The function ensures that
+    ``workers * tasks * pool_size`` never exceeds
+    ``MAX_DB_CONCURRENT_LIMIT_ALL`` by returning::
+
+        min(pool_size, MAX_DB_CONCURRENT_LIMIT_ALL // (workers * tasks))
     """
 
     if pool_size is None:
