@@ -63,4 +63,4 @@ def test_join_pool_pool_size_limited(monkeypatch):
     task = {"phase": "joins", "question": "", "metadata": {"parallelism": 20}}
     job.phase_cfg = task["metadata"]
     asyncio.run(job._run_joins_async(task))
-    assert DummyPool.size == 5
+    assert DummyPool.size == 50

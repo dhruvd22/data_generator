@@ -11,6 +11,7 @@ import logging
 import json
 import os
 from typing import Any, Dict, List
+from functools import partial
 
 from .prompt_builder import load_template_messages
 from .join_worker import JoinWorker
@@ -55,6 +56,16 @@ class JoinPool:
         self.seen: set[tuple[str, str]] = set()
         self.lock = asyncio.Lock()
         self.log = logging.getLogger(__name__)
+
+    @staticmethod
+    def _divide_pool(total: int, workers: int) -> List[int]:
+        """Return ``workers`` pool sizes summing up to ``total``."""
+        if workers <= 0:
+            return []
+        base = max(total // workers, 1)
+        remainder = max(total - base * workers, 0)
+        sizes = [base + (1 if i < remainder else 0) for i in range(workers)]
+        return sizes
 
     async def _schema_chunks(self) -> List[Dict[str, Any]]:
         """Return table subsets for each worker using GPT suggestions."""
@@ -101,7 +112,11 @@ class JoinPool:
         return chunks
 
     async def _run_worker(
-        self, batch_size: int, worker_id: int, schema_subset: Dict[str, Any]
+        self,
+        batch_size: int,
+        worker_id: int,
+        schema_subset: Dict[str, Any],
+        worker_pool: int,
     ) -> int:
         """Launch a single worker on ``schema_subset``.
 
@@ -133,20 +148,21 @@ class JoinPool:
                     list(sample_rows),
                 )
         self.log.info(
-            "Worker %d starting batch size %d with tables %s",
+            "Worker %d starting batch size %d with tables %s pool=%d",
             worker_id,
             batch_size,
             list(schema_subset),
+            worker_pool,
         )
         agent = JoinWorker(
             schema_subset,
             cfg,
-            self.validator_cls,
+            partial(self.validator_cls, pool_size=worker_pool),
             self.critic,
             self.writer,
             worker_id,
             self.client,
-            self.pool_size,
+            worker_pool,
         )
         pairs = await agent.generate(batch_size)
         async with self.lock:
@@ -164,6 +180,7 @@ class JoinPool:
         schema_chunks = await self._schema_chunks()
         n_workers = len(schema_chunks)
         self.log.info("Spawning %d workers", n_workers)
+        worker_pools = self._divide_pool(self.pool_size, n_workers)
         attempts = 0
         produced = [0] * n_workers
         self.log.info(
@@ -179,7 +196,11 @@ class JoinPool:
             for i in range(n_workers):
                 remaining = per_worker - produced[i]
                 if remaining > 0:
-                    jobs.append(self._run_worker(remaining, i, schema_chunks[i]))
+                    jobs.append(
+                        self._run_worker(
+                            remaining, i, schema_chunks[i], worker_pools[i]
+                        )
+                    )
                 else:
                     jobs.append(asyncio.sleep(0, result=0))
 
