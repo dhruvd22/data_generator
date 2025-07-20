@@ -378,17 +378,18 @@ class AutonomousJob:
         from .join_pool import JoinPool
         from .sql_validator import SQLValidator as ValCls
 
-        from functools import partial
-
         parallel = int(self.phase_cfg.get("parallelism", 1))
         if hasattr(self.client, "set_parallelism"):
             self.client.set_parallelism(parallel)
         log.info("Assigned %d concurrent OpenAI sessions", parallel)
-        self.pool_size = limit_pool_size(
-            parallel, pool_size=self.base_pool_size, tasks=self.tasks_parallelism
-        )
+
+        env_total = int(os.getenv("DB_COCURRENT_SESSION", "50"))
+        max_total = int(os.getenv("MAX_DB_CONCURRENT_LIMIT_ALL", "450"))
+        total_allowed = min(env_total, max_total)
+        task_total = max(1, total_allowed // max(self.tasks_parallelism, 1))
+        self.pool_size = task_total
         log.info(
-            "DB pool size adjusted to %d for %d workers across %d tasks",
+            "Distributing %d DB connections across %d workers (%d tasks)",
             self.pool_size,
             parallel,
             self.tasks_parallelism,
@@ -397,7 +398,7 @@ class AutonomousJob:
         pool = JoinPool(
             self.schema,
             task.get("metadata", {}),
-            partial(ValCls, pool_size=self.pool_size),
+            ValCls,
             self.writer,
             None,
             self.client,
@@ -405,7 +406,11 @@ class AutonomousJob:
         )
         pairs = await pool.generate()
 
-        post_size = int(os.getenv("DB_COCURRENT_SESSION", str(self.pool_size)))
+        post_size = env_total
+        if isinstance(self.validator, ValCls):
+            post_validator = ValCls(pool_size=post_size)
+        else:
+            post_validator = self.validator
         validation_sem = asyncio.Semaphore(post_size)
         n_rows = int(self.phase_cfg.get("n_rows", 5))
 
@@ -415,7 +420,7 @@ class AutonomousJob:
                 p["sql"] = "FAIL"
                 return p
             async with validation_sem:
-                ok, err = await asyncio.to_thread(self.validator.check, sql)
+                ok, err = await asyncio.to_thread(post_validator.check, sql)
                 if not ok:
                     log.warning("SQL validation failed: %s", err)
                     p["sql"] = "FAIL"
