@@ -71,7 +71,9 @@ flowchart TD
 
 ### Model Training / Fine-Tuning
 1. Install your ML framework (e.g. `transformers`).
-2. Convert generated JSONL to training features.
+2. Convert generated JSONL to training features using
+   `nl_sql_generator.train_utils.prepare_dataset` which handles tokenization and
+   padding.
 3. Launch fine-tuning with the dataset.
 4. Save the new checkpoint.
 
