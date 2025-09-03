@@ -5,7 +5,7 @@ can simply ``from nl_sql_generator import AutonomousJob`` without digging into
 submodules.
 
 Example:
-    >>> from nl_sql_generator import AutonomousJob
+    >>> from nl_sql_generator import AutonomousJob ( Clean up rate limit for child worker agents )
     >>> job = AutonomousJob(schema)
 """
 
