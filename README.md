@@ -1,4 +1,4 @@
-# NL SQL Data Generator
+# NL >> SQL Data Generator for LLM Fine Tuning
 
 A lightweight pipeline that turns natural language questions into
 validated PostgreSQL queries using OpenAI. It introspects your database,
