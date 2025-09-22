@@ -10,7 +10,9 @@ Builds natural language prompts using templates (Jinja-based) to generate SQL vi
 
 Multiple “phases” of generation:
 • builtins: single table, showcasing individual SQL functions
+
 • schema_docs: Q/A pairs that explain your schema in NL
+
 • single_table: queries on one table
 • joins: queries that combine multiple tables
 • complex_sqls: more elaborate joins and queries suggested by the model itself
@@ -24,8 +26,11 @@ Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
 **Strengths**
 
 • Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
+
 • SQL validation + critic gives more trust that the generated SQL isn’t garbage.
+
 • Anonymised examples help avoid leaking sensitive data.
+
 • Clean modular structure: schema loader, prompt builder, dataset writer all separated.
 
 **Limitations**
