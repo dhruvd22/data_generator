@@ -9,14 +9,19 @@ Inspects your database schema to get table structure, DDLs, relationships etc.
 Builds natural language prompts using templates (Jinja-based) to generate SQL via OpenAI, using function-calling or chat API.
 
 Multiple “phases” of generation:
+
 • builtins: single table, showcasing individual SQL functions
 
 • schema_docs: Q/A pairs that explain your schema in NL
 
 • single_table: queries on one table
+
 • joins: queries that combine multiple tables
+
 • complex_sqls: more elaborate joins and queries suggested by the model itself
+
 • sample_data: export anonymized sample rows
+
 • schema_relationship: discover/infer relationships among tables
 
 Validates generated SQL via EXPLAIN (so queries at least make sense from the planner’s perspective). Optionally runs a “critic” that attempts to fix bad SQL.
@@ -36,7 +41,9 @@ Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
 **Limitations**
 
 • Currently supports PostgreSQL only.
+
 • Dependent on OpenAI prompts; complex schemas may stretch its limits.
+
 • “Critic fix” is optional; bad SQL can still sneak through.
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
