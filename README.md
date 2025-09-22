@@ -1,10 +1,8 @@
 # NL >> SQL Data Generator for LLM Fine Tuning
 
-NL → SQL Data Generator (for Fine-Tuning LLMs)
-
 This is a lightweight, but seriously capable pipeline that automates turning your PostgreSQL database into a goldmine of NL ↔ SQL pairs, schema docs, and validated queries — all ready for fine-tuning or evaluating large language models.
 
-What It Actually Does
+**What It Actually Does**
 
 Inspects your database schema to get table structure, DDLs, relationships etc.
 
@@ -23,35 +21,18 @@ Validates generated SQL via EXPLAIN (so queries at least make sense from the pla
 
 Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
 
-Key Requirements & Config
+**Strengths**
 
-Python 3.12+
+• Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
+• SQL validation + critic gives more trust that the generated SQL isn’t garbage.
+• Anonymised examples help avoid leaking sensitive data.
+• Clean modular structure: schema loader, prompt builder, dataset writer all separated.
 
-A PostgreSQL database you can connect to
+**Limitations**
 
-OpenAI API key
-
-Configuration via a YAML (config.yaml) that defines how many examples to generate per phase, prompt templates etc.
-
-Strengths
-
-Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
-
-SQL validation + critic gives more trust that the generated SQL isn’t garbage.
-
-Anonymised examples help avoid leaking sensitive data.
-
-Clean modular structure: schema loader, prompt builder, dataset writer all separated.
-
-Limitations
-
-Currently supports PostgreSQL only.
-
-Dependent on OpenAI prompts; complex schemas may stretch its limits.
-
-No license file included, which matters if you want to use it commercially.
-
-“Critic fix” is optional; bad SQL can still sneak through.
+• Currently supports PostgreSQL only.
+• Dependent on OpenAI prompts; complex schemas may stretch its limits.
+• “Critic fix” is optional; bad SQL can still sneak through.
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
