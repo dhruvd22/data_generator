@@ -2,49 +2,31 @@
 
 This is a lightweight, but seriously capable pipeline that automates turning your PostgreSQL database into a goldmine of NL ↔ SQL pairs, schema docs, and validated queries — all ready for fine-tuning or evaluating large language models.
 
-**What It Actually Does**
+## What It Actually Does
 
-Inspects your database schema to get table structure, DDLs, relationships etc.
+    1.Inspects your database schema to get table structure, DDLs, relationships etc.
+    2.Builds natural language prompts using templates (Jinja-based) to generate SQL via OpenAI, using function-calling or chat API.
+    3.Multiple “phases” of generation:
+      • builtins: single table, showcasing individual SQL functions
+      • schema_docs: Q/A pairs that explain your schema in NL
+      • sample_data: export anonymized sample rows
+      • schema_relationship: discover/infer relationships among tables
+      • single_table: queries on one table
+      • joins: queries that combine multiple tables
+      • complex_sqls: more elaborate joins and queries suggested by the model itself
+    3.Validates generated SQL via EXPLAIN (so queries at least make sense from the planner’s perspective). Optionally runs a “critic” that attempts to fix bad SQL.
+    4.Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
 
-Builds natural language prompts using templates (Jinja-based) to generate SQL via OpenAI, using function-calling or chat API.
+## Strengths
+    • Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
+    • SQL validation + critic gives more trust that the generated SQL isn’t garbage.
+    • Anonymised examples help avoid leaking sensitive data.
+    • Clean modular structure: schema loader, prompt builder, dataset writer all separated.
 
-Multiple “phases” of generation:
-
-• builtins: single table, showcasing individual SQL functions
-
-• schema_docs: Q/A pairs that explain your schema in NL
-
-• single_table: queries on one table
-
-• joins: queries that combine multiple tables
-
-• complex_sqls: more elaborate joins and queries suggested by the model itself
-
-• sample_data: export anonymized sample rows
-
-• schema_relationship: discover/infer relationships among tables
-
-Validates generated SQL via EXPLAIN (so queries at least make sense from the planner’s perspective). Optionally runs a “critic” that attempts to fix bad SQL.
-
-Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
-
-**Strengths**
-
-• Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
-
-• SQL validation + critic gives more trust that the generated SQL isn’t garbage.
-
-• Anonymised examples help avoid leaking sensitive data.
-
-• Clean modular structure: schema loader, prompt builder, dataset writer all separated.
-
-**Limitations**
-
-• Currently supports PostgreSQL only.
-
-• Dependent on OpenAI prompts; complex schemas may stretch its limits.
-
-• “Critic fix” is optional; bad SQL can still sneak through.
+## Limitations
+    • Currently supports PostgreSQL only.
+    • Dependent on OpenAI prompts; complex schemas may stretch its limits.
+    • “Critic fix” is optional; bad SQL can still sneak through.
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
