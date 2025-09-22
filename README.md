@@ -1,9 +1,57 @@
 # NL >> SQL Data Generator for LLM Fine Tuning
 
-A lightweight pipeline that turns natural language questions into
-validated PostgreSQL queries using OpenAI. It introspects your database,
-crafts prompts, validates results and writes JSONL datasets ready for
-fine-tuning or evaluation.
+NL → SQL Data Generator (for Fine-Tuning LLMs)
+
+This is a lightweight, but seriously capable pipeline that automates turning your PostgreSQL database into a goldmine of NL ↔ SQL pairs, schema docs, and validated queries — all ready for fine-tuning or evaluating large language models.
+
+What It Actually Does
+
+Inspects your database schema to get table structure, DDLs, relationships etc.
+
+Builds natural language prompts using templates (Jinja-based) to generate SQL via OpenAI, using function-calling or chat API.
+
+Multiple “phases” of generation:
+• builtins: single table, showcasing individual SQL functions
+• schema_docs: Q/A pairs that explain your schema in NL
+• single_table: queries on one table
+• joins: queries that combine multiple tables
+• complex_sqls: more elaborate joins and queries suggested by the model itself
+• sample_data: export anonymized sample rows
+• schema_relationship: discover/infer relationships among tables
+
+Validates generated SQL via EXPLAIN (so queries at least make sense from the planner’s perspective). Optionally runs a “critic” that attempts to fix bad SQL.
+
+Outputs everything into JSONL datasets ready for fine-tuning or evaluation.
+
+Key Requirements & Config
+
+Python 3.12+
+
+A PostgreSQL database you can connect to
+
+OpenAI API key
+
+Configuration via a YAML (config.yaml) that defines how many examples to generate per phase, prompt templates etc.
+
+Strengths
+
+Modular, phased approach means you can pick which parts you need (cheaper and faster to generate subsets).
+
+SQL validation + critic gives more trust that the generated SQL isn’t garbage.
+
+Anonymised examples help avoid leaking sensitive data.
+
+Clean modular structure: schema loader, prompt builder, dataset writer all separated.
+
+Limitations
+
+Currently supports PostgreSQL only.
+
+Dependent on OpenAI prompts; complex schemas may stretch its limits.
+
+No license file included, which matters if you want to use it commercially.
+
+“Critic fix” is optional; bad SQL can still sneak through.
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
