@@ -25,7 +25,7 @@ This is a lightweight, but seriously capable pipeline that automates turning you
 
 ## Limitations
     • Currently supports PostgreSQL only.
-    • “Critic fix” is optional; bad SQL can still sneak through.
+    • “Critic fix” is optional; bad SQL can still sneak through. But will be caught during validate SQL call. 
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
