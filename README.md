@@ -25,7 +25,6 @@ This is a lightweight, but seriously capable pipeline that automates turning you
 
 ## Limitations
     • Currently supports PostgreSQL only.
-    • Dependent on OpenAI prompts; complex schemas may stretch its limits.
     • “Critic fix” is optional; bad SQL can still sneak through.
 
 [![Tests](https://img.shields.io/badge/tests-pytest-blue)](./tests)
